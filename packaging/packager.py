@@ -14,18 +14,6 @@
 
 """
 Packager module
-
-There are 5 distributions:
-1. experimental: Used for developers to package against local checked out repo.
-   e.g.: openvstorage-core_1.1.0.1397221667_1_all.deb
-2. unstable: General packages against unstable branch. No changelog, revision-based buildnumbers
-   e.g.: openvstorage-core_1.1.0.345_1_all.deb
-3. test: Packages against test branch. Tag-based build numbers, changelog generated from commit messages
-   e.g.: openvstorage-core_1.1.0.3_1_all_.deb
-4. stable: Packages against stable branch. Tag-based build numbers, changelog generated from commit messages
-   e.g.: openvstorage-core_1.1.0.4_1_all.deb
-5. release: Packages against specified release branches. Tag-based build numbers, changelog generated from commit message
-   e.g.: openvstorage-core_1.1.0.26-rc1_1_all.deb
 """
 
 from optparse import OptionParser
@@ -36,28 +24,23 @@ from redhat import RPMPackager
 
 if __name__ == '__main__':
     parser = OptionParser(description='Open vStorage packager')
-    parser.add_option('-d', '--target', dest='target', default='unstable')
-    parser.add_option('-r', '--revision', dest='revision', default=None)
+    parser.add_option('-p', '--product', dest='product')
+    parser.add_option('-r', '--release', dest='release', default=None)
+    parser.add_option('-h', '--revision', dest='revision', default=None)
     parser.add_option('-s', '--suffix', dest='suffix', default=None)
     options, args = parser.parse_args()
 
-    target = options.target
-    if target.startswith('release'):
-        if not target.startswith('release,'):
-            raise RuntimeError("In case a release target is specified, it should be of the format: 'release,<release branch>'")
-        else:
-            target = tuple(target.split(','))
-    elif target.startswith('experimental,'):
-        target = tuple(target.split(','))
-
     # 1. Collect sources
-    source_metadata = SourceCollector.collect(target=target, revision=options.revision, suffix=options.suffix)
+    metadata = SourceCollector.collect(product=options.product,
+                                       release=options.release,
+                                       revision=options.revision,
+                                       suffix=options.suffix)
 
-    if source_metadata is not None:
+    if metadata is not None:
         # 2. Build & Upload packages
         #    - Debian
-        DebianPackager.package(source_metadata)
-        DebianPackager.upload(source_metadata)
+        DebianPackager.package(metadata)
+        DebianPackager.upload(metadata)
         #    - RPM
-        RPMPackager.package(source_metadata)
-        RPMPackager.upload(source_metadata)
+        RPMPackager.package(metadata)
+        RPMPackager.upload(metadata)

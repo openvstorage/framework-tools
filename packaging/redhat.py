@@ -17,9 +17,9 @@ RPM packager module
 """
 import os
 import shutil
+import json
 from ConfigParser import RawConfigParser
 from sourcecollector import SourceCollector
-ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 
 class RPMPackager(object):
@@ -36,20 +36,16 @@ class RPMPackager(object):
         raise NotImplementedError('RPMPackager is a static class')
 
     @staticmethod
-    def package(source_metadata):
+    def package(metadata):
         """
         Packages a given package.
         """
-        distribution, version_string, revision_date = source_metadata
+        product, release, version_string, revision_date, package_name = metadata
 
-        root_path = ROOT_PATH
-        filename = '{0}/../settings.cfg'.format(root_path)
-        settings = RawConfigParser()
-        settings.read(filename)
-
-        package_name = settings.get('packaging', 'package_name')
-        repo_path_code = SourceCollector.repo_path_code.format(settings.get('packaging', 'working_dir'), package_name)
-        package_path = SourceCollector.package_path.format(settings.get('packaging', 'working_dir'), package_name)
+        settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        working_directory = settings['base_path'].format(product)
+        repo_path_code = SourceCollector.repo_path_code.format(working_directory)
+        package_path = SourceCollector.package_path.format(working_directory)
 
         # Prepare
         redhat_folder = '{0}/redhat'.format(package_path)
@@ -58,7 +54,7 @@ class RPMPackager(object):
         os.mkdir(redhat_folder)
 
         # load config
-        config_dir = '{0}/../redhat/cfgs'.format(root_path)
+        config_dir = '{0}/packaging/redhat/cfgs'.format(repo_path_code)
         packages = os.listdir(config_dir)
         for package in packages:
             package_filename = '{0}/{1}'.format(config_dir, package)
@@ -74,7 +70,7 @@ class RPMPackager(object):
             if depends_packages != '':
                 depends = []
                 for depends_package in depends_packages.split(','):
-                    depends.append('-d "{}"'.format(depends_package.strip()))
+                    depends.append('-d "{0}"'.format(depends_package.strip()))
                 depends = ' '.join(depends)
 
             package_root_path = os.path.join(package_path, package_name)
@@ -102,7 +98,7 @@ class RPMPackager(object):
                         os.makedirs(dest_full_path)
                     shutil.copy(source_full_path, dest_full_path)
             before_install, after_install = ' ', ' '
-            script_root = '{0}/../redhat/scripts'.format(root_path)
+            script_root = '{0}/packaging/redhat/scripts'.format(repo_path_code)
             before_install_script = '{0}.before-install.sh'.format(package_name)
             before_install_script_path = os.path.join(script_root, before_install_script)
             if os.path.exists(before_install_script_path):
@@ -137,18 +133,15 @@ class RPMPackager(object):
             print(os.listdir(redhat_folder))
 
     @staticmethod
-    def upload(source_metadata):
+    def upload(metadata):
         """
         Uploads a given set of packages
         """
-        _ = source_metadata
-        root_path = ROOT_PATH
-        filename = '{0}/../settings.cfg'.format(root_path)
-        settings = RawConfigParser()
-        settings.read(filename)
+        product, release, version_string, revision_date, package_name = metadata
 
-        package_name = settings.get('packaging', 'package_name')
-        package_path = SourceCollector.package_path.format(settings.get('packaging', 'working_dir'), package_name)
+        settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        working_directory = settings['base_path'].format(product)
+        package_path = SourceCollector.package_path.format(working_directory)
 
         redhat_folder = '{0}/redhat'.format(package_path)
         destination_folder = '/usr/share/repo/CentOS/7/x86_64/'

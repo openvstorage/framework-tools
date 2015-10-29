@@ -1,0 +1,13 @@
+{
+    "base_path": "/tmp/{0}",
+    "releases": [
+        "experimental",
+        "master",
+        "chicago",
+        "denver",
+        "eugene"
+    ],
+    "repositories": {
+        "openvstorage": "git@github.com:openvstorage/openvstorage.git"
+    }
+}

@@ -16,8 +16,8 @@
 Debian packager module
 """
 import os
+import json
 import shutil
-from ConfigParser import RawConfigParser
 from sourcecollector import SourceCollector
 
 
@@ -35,19 +35,17 @@ class DebianPackager(object):
         raise NotImplementedError('DebianPackager is a static class')
 
     @staticmethod
-    def package(source_metadata):
+    def package(metadata):
         """
         Packages a given package.
         """
-        distribution, version_string, revision_date = source_metadata
 
-        filename = '{0}/../settings.cfg'.format(os.path.dirname(os.path.abspath(__file__)))
-        settings = RawConfigParser()
-        settings.read(filename)
+        product, release, version_string, revision_date, package_name = metadata
 
-        package_name = settings.get('packaging', 'package_name')
-        repo_path_code = SourceCollector.repo_path_code.format(settings.get('packaging', 'working_dir'), package_name)
-        package_path = SourceCollector.package_path.format(settings.get('packaging', 'working_dir'), package_name)
+        settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        working_directory = settings['base_path'].format(product)
+        repo_path_code = SourceCollector.repo_path_code.format(working_directory)
+        package_path = SourceCollector.package_path.format(working_directory)
 
         # Prepare
         # /<pp>/debian
@@ -77,7 +75,7 @@ class DebianPackager(object):
   * For changes, see individual changelogs
 
  -- Packaging System <engineering@openvstorage.com>  {3}
-""".format(package_name, version_string, distribution, revision_date.strftime('%a, %d %b %Y %H:%M:%S +0000')))
+""".format(package_name, version_string, release, revision_date.strftime('%a, %d %b %Y %H:%M:%S +0000')))
 
         # Some more tweaks
         SourceCollector.run(command='chmod 770 {0}/{1}-{2}/debian/rules'.format(debian_folder, package_name, version_string),
@@ -90,30 +88,21 @@ class DebianPackager(object):
                             working_directory='{0}/{1}-{2}'.format(debian_folder, package_name, version_string))
 
     @staticmethod
-    def upload(source_metadata):
+    def upload(metadata):
         """
         Uploads a given set of packages
         """
 
-        filename = '{0}/../settings.cfg'.format(os.path.dirname(os.path.abspath(__file__)))
-        settings = RawConfigParser()
-        settings.read(filename)
+        product, release, version_string, revision_date, package_name = metadata
 
-        package_name = settings.get('packaging', 'package_name')
-        package_path = SourceCollector.package_path.format(settings.get('packaging', 'working_dir'), package_name)
-
-        # Get release name from the repo code settings.cfg not master settings.cfg
-        repo_path_code = SourceCollector.repo_path_code.format(settings.get('packaging', 'working_dir'), settings.get('packaging', 'package_name'))
-        filename = '{0}/packaging/settings.cfg'.format(repo_path_code)
-        code_settings = RawConfigParser()
-        code_settings.read(filename)
-        releasename = code_settings.get('version', 'releasename').lower()
-        target, version_string, _ = source_metadata
+        settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        working_directory = settings['base_path'].format(product)
+        package_path = SourceCollector.package_path.format(working_directory)
 
         user = "upload"
         server = "172.20.3.16"
         repo_root_path = "/usr/share/repo"
-        upload_path = os.path.join(repo_root_path, target, releasename)
+        upload_path = os.path.join(repo_root_path, release)
 
         print("Uploading {0} {1}".format(package_name, version_string))
         debs_path = os.path.join(package_path, 'debian')
@@ -130,16 +119,13 @@ class DebianPackager(object):
             check_package_command = "ssh {0}@{1} ls {2}".format(user, server, upload_path)
             existing_packages = SourceCollector.run(command=check_package_command,
                                                     working_directory=debs_path).split()
-            upload = True
-            for package in existing_packages:
-                if package == deb_package:
-                    print("Package already uploaded, done...")
-                    upload = False
-                    continue
-            if upload:
+            upload = deb_package not in existing_packages
+            if upload is False:
+                print("Package already uploaded, done...")
+            else:
                 scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
                 SourceCollector.run(command=scp_command,
                                     working_directory=debs_path)
-                remote_command = "ssh {0}@{1} reprepro -Vb {2}/debian includedeb {3}-{4} {5}".format(user, server, repo_root_path, releasename, target, destination_path)
+                remote_command = "ssh {0}@{1} reprepro -Vb {2}/debian includedeb {3} {4}".format(user, server, repo_root_path, release, destination_path)
                 SourceCollector.run(command=remote_command,
                                     working_directory=debs_path)

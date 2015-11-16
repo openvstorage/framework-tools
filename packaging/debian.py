@@ -110,8 +110,7 @@ class DebianPackager(object):
 
         create_releasename_command = "ssh {0}@{1} mkdir -p {2}".format(user, server, upload_path)
         SourceCollector.run(command=create_releasename_command,
-                            working_directory=debs_path,
-                            print_only=True)
+                            working_directory=debs_path)
 
         for deb_package in deb_packages:
             source_path = os.path.join(debs_path, deb_package)
@@ -119,17 +118,14 @@ class DebianPackager(object):
 
             check_package_command = "ssh {0}@{1} ls {2}".format(user, server, upload_path)
             existing_packages = SourceCollector.run(command=check_package_command,
-                                                    working_directory=debs_path,
-                                                    print_only=True).split()
+                                                    working_directory=debs_path).split()
             upload = deb_package not in existing_packages
             if upload is False:
                 print("Package already uploaded, done...")
             else:
                 scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
                 SourceCollector.run(command=scp_command,
-                                    working_directory=debs_path,
-                                    print_only=True)
+                                    working_directory=debs_path)
                 remote_command = "ssh {0}@{1} reprepro -Vb {2}/debian includedeb {3} {4}".format(user, server, base_path, release, destination_path)
                 SourceCollector.run(command=remote_command,
-                                    working_directory=debs_path,
-                                    print_only=True)
+                                    working_directory=debs_path)

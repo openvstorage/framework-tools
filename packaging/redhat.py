@@ -17,7 +17,6 @@ RPM packager module
 """
 import os
 import shutil
-import json
 from ConfigParser import RawConfigParser
 from sourcecollector import SourceCollector
 

@@ -16,7 +16,6 @@
 Debian packager module
 """
 import os
-import json
 import shutil
 from sourcecollector import SourceCollector
 

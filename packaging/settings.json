@@ -23,5 +23,8 @@
                 "base_path": "/usr/share/repo/CentOS/7/x86_64"
             }
         }
+    },
+    "branch_map": {
+        "master": "unstable"
     }
 }

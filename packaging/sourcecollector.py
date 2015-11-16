@@ -263,9 +263,10 @@ class SourceCollector(object):
         SourceCollector.run(command='rm -f CHANGELOG.txt',
                             working_directory=repo_path_code)
         print '    Archive: {0}/{1}_{2}.tar.gz'.format(package_path, code_settings['package_name'], version_string)
-
         print 'Done'
 
+        if release in settings['branch_map']:
+            release = settings['branch_map'][release]
         return product, release, version_string, revision_date, code_settings['package_name']
 
     @staticmethod

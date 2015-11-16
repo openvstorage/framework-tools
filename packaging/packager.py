@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser = OptionParser(description='Open vStorage packager')
     parser.add_option('-p', '--product', dest='product')
     parser.add_option('-r', '--release', dest='release', default=None)
-    parser.add_option('-h', '--revision', dest='revision', default=None)
+    parser.add_option('-e', '--revision', dest='revision', default=None)
     parser.add_option('-s', '--suffix', dest='suffix', default=None)
     options, args = parser.parse_args()
 

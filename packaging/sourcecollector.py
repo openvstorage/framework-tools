@@ -70,7 +70,7 @@ class SourceCollector(object):
         * If none given, the release will be used as suffix
         """
 
-        settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         repository = settings['repositories']['code'][product]
         working_directory = settings['base_path'].format(product)
         repo_path_code = SourceCollector.repo_path_code.format(working_directory)
@@ -140,7 +140,7 @@ class SourceCollector(object):
         print '    Revision: {0}'.format(current_revision)
 
         # Build version
-        code_settings = json.loads('{0}/packaging/settings.json'.format(repo_path_code))
+        code_settings = SourceCollector.json_loads('{0}/packaging/settings.json'.format(repo_path_code))
         version = '{0}.{1}.{2}'.format(code_settings['version']['major'],
                                        code_settings['version']['minor'],
                                        code_settings['version']['patch'])
@@ -290,3 +290,11 @@ class SourceCollector(object):
         else:
             os.chdir(working_directory)
             return check_output(command, shell=True)
+
+    @staticmethod
+    def json_loads(path):
+        """
+        Loads json from a path
+        """
+        with open(path, 'r') as config_file:
+            return json.loads(config_file.read())

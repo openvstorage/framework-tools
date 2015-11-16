@@ -42,7 +42,7 @@ class DebianPackager(object):
 
         product, release, version_string, revision_date, package_name = metadata
 
-        settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
         repo_path_code = SourceCollector.repo_path_code.format(working_directory)
         package_path = SourceCollector.package_path.format(working_directory)
@@ -95,7 +95,7 @@ class DebianPackager(object):
 
         product, release, version_string, revision_date, package_name = metadata
 
-        settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
         package_path = SourceCollector.package_path.format(working_directory)
 

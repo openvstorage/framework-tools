@@ -8,6 +8,20 @@
         "eugene"
     ],
     "repositories": {
-        "openvstorage": "git@github.com:openvstorage/openvstorage.git"
+        "code": {
+            "openvstorage": "git@github.com:openvstorage/openvstorage.git"
+        },
+        "packages": {
+            "debian": {
+                "ip": "172.20.3.16",
+                "user": "upload",
+                "base_path": "/usr/share/repo"
+            },
+            "redhat": {
+                "ip": "172.20.3.17",
+                "user": "upload",
+                "base_path": "/usr/share/repo/CentOS/7/x86_64"
+            }
+        }
     }
 }

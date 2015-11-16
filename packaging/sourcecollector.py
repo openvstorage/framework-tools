@@ -71,7 +71,7 @@ class SourceCollector(object):
         """
 
         settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
-        repository = settings['repositories'][product]
+        repository = settings['repositories']['code'][product]
         working_directory = settings['base_path'].format(product)
         repo_path_code = SourceCollector.repo_path_code.format(working_directory)
         repo_path_metadata = SourceCollector.repo_path_metadata.format(working_directory)
@@ -281,9 +281,12 @@ class SourceCollector(object):
         SourceCollector.run('git fetch --tags', path)
 
     @staticmethod
-    def run(command, working_directory):
+    def run(command, working_directory, print_only=False):
         """
         Runs a comment, returning the output
         """
-        os.chdir(working_directory)
-        return check_output(command, shell=True)
+        if print_only is True:
+            print command
+        else:
+            os.chdir(working_directory)
+            return check_output(command, shell=True)

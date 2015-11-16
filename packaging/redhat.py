@@ -142,21 +142,29 @@ class RPMPackager(object):
         settings = json.loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
         package_path = SourceCollector.package_path.format(working_directory)
-
         redhat_folder = '{0}/redhat'.format(package_path)
-        destination_folder = '/usr/share/repo/CentOS/7/x86_64/'
-        destination_server = '172.20.3.17'
-        user = 'upload'
+
+        package_info = settings['repositories']['packages']['redhat']
+        server = package_info['ip']
+        user = package_info['user']
+        base_path = package_info['base_path']
 
         packages = os.listdir(redhat_folder)
         for package in packages:
             package_source_path = os.path.join(redhat_folder, package)
 
-            command = 'scp {0} {1}@{2}:{3}'.format(package_source_path, user, destination_server, destination_folder)
+            command = 'scp {0} {1}@{2}:{3}/pool/{4}'.format(package_source_path, user, server, base_path, release)
             print('Uploading package {0}'.format(package))
             SourceCollector.run(command,
-                                working_directory=redhat_folder)
+                                working_directory=redhat_folder,
+                                print_only=True)
         if len(packages) > 0:
-            command = 'ssh {0}@{1} createrepo --update {2}'.format(user, destination_server, destination_folder)
+            # Cleanup existing files
+            command = 'ssh {0}@{1} {2}/cleanup_repo.py {2}/pool/{3}/'.format(user, server, base_path, release)
+            print(SourceCollector.run(command,
+                                      working_directory=redhat_folder,
+                                      print_only=True))
+            command = 'ssh {0}@{1} createrepo --update {2}/dists/{3}'.format(user, server, base_path, release)
             SourceCollector.run(command,
-                                working_directory=redhat_folder)
+                                working_directory=redhat_folder,
+                                print_only=True)

@@ -3,13 +3,13 @@
     "releases": [
         "experimental",
         "master",
-        "chicago",
         "denver",
         "eugene"
     ],
     "repositories": {
         "code": {
-            "openvstorage": "git@github.com:openvstorage/openvstorage.git"
+            "openvstorage": "git@github.com:openvstorage/openvstorage.git",
+            "openvstorage-backend": "git@github.com:openvstorage/framework-alba-plugin.git"
         },
         "packages": {
             "debian": {

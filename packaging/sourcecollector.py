@@ -185,6 +185,10 @@ class SourceCollector(object):
                     continue
 
                 timestamp, log_hash, description = log_line.split('|')
+                try:
+                    description.encode('ascii')
+                except UnicodeDecodeError:
+                    continue
                 log_date = datetime.fromtimestamp(float(timestamp))
                 active_tag = None
                 for tag in tag_data:

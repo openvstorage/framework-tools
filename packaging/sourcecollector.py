@@ -21,7 +21,7 @@ import re
 import time
 import json
 from datetime import datetime
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 
 
 class SourceCollector(object):
@@ -293,8 +293,17 @@ class SourceCollector(object):
         if print_only is True:
             print command
         else:
+            cur_dir = os.getcwd()
             os.chdir(working_directory)
-            return check_output(command, shell=True)
+            try:
+                return check_output(command, shell=True)
+            except CalledProcessError as cpe:
+                # CalledProcessError doesn't include the output in its __str__
+                #  making debug harder
+                raise RuntimeError('{0}. \n Output: \n {1} \n'.format(cpe, cpe.output))
+            finally:
+                # return to previous directory, easier to test interactive
+                os.chdir(cur_dir)
 
     @staticmethod
     def json_loads(path):

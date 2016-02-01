@@ -21,7 +21,7 @@ import re
 import time
 import json
 from datetime import datetime
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 
 
 class SourceCollector(object):
@@ -82,7 +82,7 @@ class SourceCollector(object):
             if release not in [None, 'experimental']:
                 raise ValueError('If a revision is given, the release should either be empty or \'experimental\'')
         if release is not None and release not in settings['releases']:
-            raise ValueError('Release {0} is invalid. Should be in {1}'.format(settings['releases']))
+            raise ValueError('Release {0} is invalid. Should be in {1}'.format(release, settings['releases']))
 
         print 'Collecting sources'
         for directory in [repo_path_code, repo_path_metadata, package_path]:
@@ -293,8 +293,17 @@ class SourceCollector(object):
         if print_only is True:
             print command
         else:
+            cur_dir = os.getcwd()
             os.chdir(working_directory)
-            return check_output(command, shell=True)
+            try:
+                return check_output(command, shell=True)
+            except CalledProcessError as cpe:
+                # CalledProcessError doesn't include the output in its __str__
+                #  making debug harder
+                raise RuntimeError('{0}. \n Output: \n {1} \n'.format(cpe, cpe.output))
+            finally:
+                # return to previous directory, easier to test interactive
+                os.chdir(cur_dir)
 
     @staticmethod
     def json_loads(path):

@@ -52,6 +52,14 @@ class RPMPackager(object):
             shutil.rmtree(redhat_folder)
         os.mkdir(redhat_folder)
 
+        # extract tar.gz to redhat_folder
+        shutil.copyfile('{0}/{1}_{2}.tar.gz'.format(package_path, package_name, version_string),
+                        '{0}/{1}_{2}.orig.tar.gz'.format(redhat_folder, package_name, version_string))
+        # /<pp>/debian/<packagename>-1.2.3/...
+        SourceCollector.run(command='tar -xzf {0}_{1}.orig.tar.gz'.format(package_name, version_string),
+                            working_directory=redhat_folder)
+        code_source_path = '{0}/{1}-{2}'.format(redhat_folder, package_name, version_string)
+
         # load config
         config_dir = '{0}/packaging/redhat/cfgs'.format(repo_path_code)
         packages = os.listdir(config_dir)
@@ -83,21 +91,21 @@ class RPMPackager(object):
                     source_dir, dest_location = dir_.split('=')
                     # source_dir = dir to copy - from repo root
                     # dest_location = dir under which to copy the source_dir
-                    source_full_path = os.path.join(repo_path_code, source_dir.strip())
+                    source_full_path = os.path.join(code_source_path, source_dir.strip())
                     dest_full_path = os.path.join(package_root_path, dest_location.strip())
                     shutil.copytree(source_full_path, dest_full_path)
             for file_ in files.split(','):
                 file_ = file_.strip()
                 if file_ != "''" and file_ != '':
                     source_file, dest_location = file_.split('=')
-                    source_full_path = os.path.join(repo_path_code, source_file.strip())
+                    source_full_path = os.path.join(code_source_path, source_file.strip())
                     dest_full_path = os.path.join(package_root_path, dest_location.strip())
 
                     if not os.path.exists(dest_full_path):
                         os.makedirs(dest_full_path)
                     shutil.copy(source_full_path, dest_full_path)
             before_install, after_install = ' ', ' '
-            script_root = '{0}/packaging/redhat/scripts'.format(repo_path_code)
+            script_root = '{0}/packaging/redhat/scripts'.format(code_source_path)
             before_install_script = '{0}.before-install.sh'.format(package_name)
             before_install_script_path = os.path.join(script_root, before_install_script)
             if os.path.exists(before_install_script_path):

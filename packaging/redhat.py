@@ -156,7 +156,7 @@ class RPMPackager(object):
         user = package_info['user']
         base_path = package_info['base_path']
 
-        packages = os.listdir(redhat_folder)
+        packages = [p for p in os.listdir(redhat_folder) if p.endswith('.rpm')]
         for package in packages:
             package_source_path = os.path.join(redhat_folder, package)
 

@@ -60,6 +60,12 @@ class RPMPackager(object):
                             working_directory=redhat_folder)
         code_source_path = '{0}/{1}-{2}'.format(redhat_folder, package_name, version_string)
 
+        # copy packaging
+        source_packaging_path = os.path.join(repo_path_code, 'packaging')
+        dest_packaging_path = os.path.join(code_source_path, 'packaging')
+        if os.path.exists(source_packaging_path):
+            shutil.copytree(source_packaging_path, dest_packaging_path)
+
         # load config
         config_dir = '{0}/packaging/redhat/cfgs'.format(repo_path_code)
         packages = os.listdir(config_dir)

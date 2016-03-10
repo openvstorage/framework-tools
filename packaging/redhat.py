@@ -63,7 +63,8 @@ class RPMPackager(object):
         # copy packaging
         source_packaging_path = os.path.join(repo_path_code, 'packaging')
         dest_packaging_path = os.path.join(code_source_path, 'packaging')
-        shutil.copytree(source_packaging_path, dest_packaging_path)
+        if os.path.exists(source_packaging_path):
+            shutil.copytree(source_packaging_path, dest_packaging_path)
 
         # load config
         config_dir = '{0}/packaging/redhat/cfgs'.format(repo_path_code)

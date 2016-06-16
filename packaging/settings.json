@@ -5,7 +5,8 @@
         "master",
         "denver",
         "eugene",
-        "eugene-updates"
+        "eugene-updates",
+        "fargo"
     ],
     "repositories": {
         "code": {

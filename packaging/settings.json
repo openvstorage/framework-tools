@@ -15,7 +15,8 @@
             "openvstorage-sdm": "git@github.com:openvstorage/alba-asdmanager.git",
             "openvstorage-cinder-plugin": "git@github.com:openvstorage/framework-cinder-plugin.git",
             "support-portal": "git@github.com:openvstorage/support-portal.git",
-            "openvstorage-test": "git@github.com:openvstorage/integrationtests.git"
+            "openvstorage-test": "git@github.com:openvstorage/integrationtests.git",
+            "openvstorage-health-check": "git@github.com:openvstorage/openvstorage-health-check.git"
         },
         "packages": {
             "debian": {

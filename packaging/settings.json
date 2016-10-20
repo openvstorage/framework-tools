@@ -19,16 +19,25 @@
             "openvstorage-health-check": "git@github.com:openvstorage/openvstorage-health-check.git"
         },
         "packages": {
-            "debian": {
-                "ip": "172.20.3.16",
-                "user": "upload",
-                "base_path": "/usr/share/repo"
-            },
-            "redhat": {
-                "ip": "172.20.3.17",
-                "user": "upload",
-                "base_path": "/usr/share/repo/CentOS/7/x86_64"
-            }
+            "debian": [
+                {
+                    "ip": "172.20.3.16",
+                    "user": "upload",
+                    "base_path": "/usr/share/repo"
+                },
+                {
+                    "ip": "172.20.3.29",
+                    "user": "upload",
+                    "base_path": "/usr/share/repo"
+                }
+            ],
+            "redhat": [
+                {
+                    "ip": "172.20.3.17",
+                    "user": "upload",
+                    "base_path": "/usr/share/repo/CentOS/7/x86_64"
+                }
+            ]
         }
     },
     "branch_map": {

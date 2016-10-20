@@ -101,33 +101,34 @@ class DebianPackager(object):
         package_path = SourceCollector.package_path.format(working_directory)
 
         package_info = settings['repositories']['packages']['debian']
-        server = package_info['ip']
-        user = package_info['user']
-        base_path = package_info['base_path']
-        upload_path = os.path.join(base_path, release)
+        for destination in package_info:
+            server = destination['ip']
+            user = destination['user']
+            base_path = destination['base_path']
+            upload_path = os.path.join(base_path, release)
 
-        print("Uploading {0} {1}".format(package_name, version_string))
-        debs_path = os.path.join(package_path, 'debian')
-        deb_packages = [filename for filename in os.listdir(debs_path) if filename.endswith('.deb')]
+            print("Uploading {0} {1}".format(package_name, version_string))
+            debs_path = os.path.join(package_path, 'debian')
+            deb_packages = [filename for filename in os.listdir(debs_path) if filename.endswith('.deb')]
 
-        create_releasename_command = "ssh {0}@{1} mkdir -p {2}".format(user, server, upload_path)
-        SourceCollector.run(command=create_releasename_command,
-                            working_directory=debs_path)
+            create_releasename_command = "ssh {0}@{1} mkdir -p {2}".format(user, server, upload_path)
+            SourceCollector.run(command=create_releasename_command,
+                                working_directory=debs_path)
 
-        for deb_package in deb_packages:
-            source_path = os.path.join(debs_path, deb_package)
-            destination_path = os.path.join(upload_path, deb_package)
+            for deb_package in deb_packages:
+                source_path = os.path.join(debs_path, deb_package)
+                destination_path = os.path.join(upload_path, deb_package)
 
-            check_package_command = "ssh {0}@{1} ls {2}".format(user, server, upload_path)
-            existing_packages = SourceCollector.run(command=check_package_command,
-                                                    working_directory=debs_path).split()
-            upload = deb_package not in existing_packages
-            if upload is False:
-                print("Package already uploaded, done...")
-            else:
-                scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
-                SourceCollector.run(command=scp_command,
-                                    working_directory=debs_path)
-                remote_command = "ssh {0}@{1} reprepro -Vb {2}/debian includedeb {3} {4}".format(user, server, base_path, release, destination_path)
-                SourceCollector.run(command=remote_command,
-                                    working_directory=debs_path)
+                check_package_command = "ssh {0}@{1} ls {2}".format(user, server, upload_path)
+                existing_packages = SourceCollector.run(command=check_package_command,
+                                                        working_directory=debs_path).split()
+                upload = deb_package not in existing_packages
+                if upload is False:
+                    print("Package already uploaded, done...")
+                else:
+                    scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
+                    SourceCollector.run(command=scp_command,
+                                        working_directory=debs_path)
+                    remote_command = "ssh {0}@{1} reprepro -Vb {2}/debian includedeb {3} {4}".format(user, server, base_path, release, destination_path)
+                    SourceCollector.run(command=remote_command,
+                                        working_directory=debs_path)

@@ -160,23 +160,24 @@ class RPMPackager(object):
         redhat_folder = '{0}/redhat'.format(package_path)
 
         package_info = settings['repositories']['packages']['redhat']
-        server = package_info['ip']
-        user = package_info['user']
-        base_path = package_info['base_path']
+        for destination in package_info:
+            server = destination['ip']
+            user = destination['user']
+            base_path = destination['base_path']
 
-        packages = [p for p in os.listdir(redhat_folder) if p.endswith('.rpm')]
-        for package in packages:
-            package_source_path = os.path.join(redhat_folder, package)
+            packages = [p for p in os.listdir(redhat_folder) if p.endswith('.rpm')]
+            for package in packages:
+                package_source_path = os.path.join(redhat_folder, package)
 
-            command = 'scp {0} {1}@{2}:{3}/pool/{4}'.format(package_source_path, user, server, base_path, release)
-            print('Uploading package {0}'.format(package))
-            SourceCollector.run(command,
-                                working_directory=redhat_folder)
-        if len(packages) > 0:
-            # Cleanup existing files
-            command = 'ssh {0}@{1} {2}/cleanup_repo.py {2}/pool/{3}/'.format(user, server, base_path, release)
-            print(SourceCollector.run(command,
-                                      working_directory=redhat_folder))
-            command = 'ssh {0}@{1} createrepo --update {2}/dists/{3}'.format(user, server, base_path, release)
-            SourceCollector.run(command,
-                                working_directory=redhat_folder)
+                command = 'scp {0} {1}@{2}:{3}/pool/{4}'.format(package_source_path, user, server, base_path, release)
+                print('Uploading package {0}'.format(package))
+                SourceCollector.run(command,
+                                    working_directory=redhat_folder)
+            if len(packages) > 0:
+                # Cleanup existing files
+                command = 'ssh {0}@{1} {2}/cleanup_repo.py {2}/pool/{3}/'.format(user, server, base_path, release)
+                print(SourceCollector.run(command,
+                                          working_directory=redhat_folder))
+                command = 'ssh {0}@{1} createrepo --update {2}/dists/{3}'.format(user, server, base_path, release)
+                SourceCollector.run(command,
+                                    working_directory=redhat_folder)

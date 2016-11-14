@@ -186,7 +186,7 @@ class SourceCollector(object):
                 if 'Added tag ' in log_line and ' for changeset ' in log_line:
                     continue
 
-                timestamp, log_hash, description = log_line.split('|')
+                timestamp, log_hash, description = log_line.split('|', 2)
                 try:
                     description.encode('ascii')
                 except UnicodeDecodeError:

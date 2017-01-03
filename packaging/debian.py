@@ -100,35 +100,42 @@ class DebianPackager(object):
         working_directory = settings['base_path'].format(product)
         package_path = SourceCollector.package_path.format(working_directory)
 
-        package_info = settings['repositories']['packages']['debian']
+        package_info = settings['repositories']['packages'].get('debian', [])
         for destination in package_info:
             server = destination['ip']
             user = destination['user']
             base_path = destination['base_path']
             upload_path = os.path.join(base_path, release)
+            pool_path = os.path.join(base_path, 'debian/pool/main')
 
-            print("Uploading {0} {1}".format(package_name, version_string))
+            print 'Publishing to {0}@{1}'.format(user, server)
             debs_path = os.path.join(package_path, 'debian')
             deb_packages = [filename for filename in os.listdir(debs_path) if filename.endswith('.deb')]
 
-            create_releasename_command = "ssh {0}@{1} mkdir -p {2}".format(user, server, upload_path)
+            create_releasename_command = "ssh {0}@{1} 'mkdir -p {2}'".format(user, server, upload_path)
             SourceCollector.run(command=create_releasename_command,
                                 working_directory=debs_path)
 
             for deb_package in deb_packages:
-                source_path = os.path.join(debs_path, deb_package)
+                print '  {0}'.format(deb_package)
                 destination_path = os.path.join(upload_path, deb_package)
 
-                check_package_command = "ssh {0}@{1} ls {2}".format(user, server, upload_path)
-                existing_packages = SourceCollector.run(command=check_package_command,
-                                                        working_directory=debs_path).split()
-                upload = deb_package not in existing_packages
-                if upload is False:
-                    print("Package already uploaded, done...")
+                find_pool_package_command = "ssh {0}@{1} 'find {2}/ -name \"{3}\"'".format(user, server, pool_path, deb_package)
+                pool_package = SourceCollector.run(command=find_pool_package_command,
+                                                   working_directory=debs_path).strip()
+                if pool_package != '':
+                    print '    Already present on server, using that package'
+                    cp_command = "ssh {0}@{1} 'cp {2} {3}'".format(user, server, pool_package, destination_path)
+                    SourceCollector.run(command=cp_command,
+                                        working_directory=debs_path)
                 else:
+                    print '    Uploading package'
+                    source_path = os.path.join(debs_path, deb_package)
+
                     scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
                     SourceCollector.run(command=scp_command,
                                         working_directory=debs_path)
-                    remote_command = "ssh {0}@{1} reprepro -Vb {2}/debian includedeb {3} {4}".format(user, server, base_path, release, destination_path)
-                    SourceCollector.run(command=remote_command,
-                                        working_directory=debs_path)
+                print '    Adding package to repo'
+                remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, release, destination_path)
+                SourceCollector.run(command=remote_command,
+                                    working_directory=debs_path)

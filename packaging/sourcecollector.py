@@ -48,7 +48,7 @@ class SourceCollector(object):
         raise NotImplementedError('SourceCollector is a static class')
 
     @staticmethod
-    def collect(product, release=None, revision=None, suffix=None):
+    def collect(product, release=None, revision=None):
         """
         Executes the source collecting logic
 
@@ -62,14 +62,11 @@ class SourceCollector(object):
 
         @param product: The product that needs to be packaged
         @param release: The releasename that needs to be packaged
-        * 'experimental': packages the given revision, or whatever is in the code repo if no revision was given
-        * 'master': package master (unstable)
-        * all others: package from the branch named after the release
+        * 'develop': package develop branch
+        * 'experimental': packages the given revision. The revision parameter must be passed
+        * 'master': package master
         @param revision: Specifies an exact revision
         * If the revision parameter is specified, the only valid release is 'experimental'.
-        * If release is None, the release will be loaded form the specified revision
-        @param suffix: An optional suffix for releases different from 'experimental' and 'master'
-        * If none given, the release will be used as suffix
         """
 
         settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
@@ -81,8 +78,10 @@ class SourceCollector(object):
 
         print 'Validating input parameters'
         if revision is not None:
-            if release not in [None, 'experimental']:
-                raise ValueError('If a revision is given, the release should either be empty or \'experimental\'')
+            if release != 'experimental':
+                raise ValueError('If a revision is given, the release should be \'experimental\'')
+        elif release == 'experimental':
+            raise ValueError('The \'experimental\' release must have a revision')
         if release is not None and release not in settings['releases']:
             raise ValueError('Release {0} is invalid. Should be in {1}'.format(release, settings['releases']))
 
@@ -96,50 +95,20 @@ class SourceCollector(object):
         SourceCollector._git_checkout_to(path=repo_path_metadata,
                                          revision='master',
                                          repo=repository)
-        known_branches = []
-        for branch in SourceCollector.run(command='git branch -r',
-                                          working_directory=repo_path_metadata).splitlines():
-            if 'origin/HEAD' in branch:
-                continue
-            known_branches.append(branch.strip().replace('origin/', ''))
-        if release not in [None, 'experimental'] and release not in known_branches:
-            raise ValueError('Unknown release')
+        SourceCollector._git_checkout_to(path=repo_path_code,
+                                         revision=release if revision is None else revision,
+                                         repo=repository)
 
-        if release != 'experimental' or revision is not None:
-            SourceCollector._git_checkout_to(path=repo_path_code,
-                                             revision=release if revision is None else revision,
-                                             repo=repository)
-            if release != 'experimental' and revision is not None:
-                release = SourceCollector.run(command='git branch | grep "*"',
-                                              working_directory=repo_path_code).strip().lstrip('* ')
-                if release not in settings['releases']:
-                    raise ValueError('Release {0} is invalid. Should be in {1}'.format(settings['releases']))
-
-        # Get parent branches
-        branches = ['master']
-        if release not in [None, 'experimental', 'master']:
-            branches.append(release)
-
-        # Get suffix
-        if release == 'experimental':
-            suffix = 'exp'
-        elif release == 'master':
-            suffix = 'rev'
-        elif suffix is None:
-            suffix = release
+        suffix = None
+        if release in ['experimental', 'develop']:
+            suffix = 'dev.{0}'.format(int(time.time()))
 
         # Get current revision and date
         print '  Fetch current revision'
-        revision_number = SourceCollector.run(command='git rev-list HEAD | wc -l',
-                                              working_directory=repo_path_code).strip()
         revision_hash, revision_date = SourceCollector.run(command='git show HEAD --pretty --format="%h|%at" -s',
                                                            working_directory=repo_path_code).strip().split('|')
-        if revision is not None:
-            if revision_hash != revision:
-                raise RuntimeError('Could not match requested hash. Got {0}, expected {1}'.format(revision_hash, revision))
         revision_date = datetime.fromtimestamp(float(revision_date))
-        current_revision = '{0}.{1}'.format(revision_number, revision_hash)
-        print '    Revision: {0}'.format(current_revision)
+        print '    Revision: {0}'.format(revision_hash)
 
         # Build version
         code_settings = SourceCollector.json_loads('{0}/packaging/settings.json'.format(repo_path_code))
@@ -156,7 +125,7 @@ class SourceCollector(object):
             parts = raw_tag.strip().split(' ')
             rev_hash = parts[0]
             tag = parts[1].replace('refs/tags/', '')
-            match = re.search('^(?P<version>[0-9]+?\.[0-9]+?\.[0-9]+?)(-(?P<suffix>.+)\.(?P<build>[0-9]+))?$', tag)
+            match = re.search('^(?P<version>[0-9]+?\.[0-9]+?\.[0-9]+?)((-(?P<suffix>.+))?\.(?P<build>[0-9]+))?$', tag)
             if match:
                 match_dict = match.groupdict()
                 tag_version = match_dict['version']
@@ -170,15 +139,13 @@ class SourceCollector(object):
         # Build changelog
         increment_build = True
         changes_found = False
-        other_changes = False
         changelog = []
-        if release not in ['experimental', 'master']:
+        if release == 'master':
             print '  Generating changelog'
             changelog.append(code_settings['product_name'])
-            changelog.append('=============')
+            changelog.append('===============')
             changelog.append('')
-            changelog.append('This changelog is generated based on DVCS. Due to the nature of DVCS the')
-            changelog.append('order of changes in this document can be slightly different from reality.')
+            changelog.append('For the full changelog, see https://github.com/openvstorage')
             changelog.append('')
             log = SourceCollector.run(command='git --no-pager log origin/{0} --date-order --pretty --format="%at|%H|%s"'.format(release),
                                       working_directory=repo_path_code)
@@ -191,33 +158,19 @@ class SourceCollector(object):
                     description.encode('ascii')
                 except UnicodeDecodeError:
                     continue
-                log_date = datetime.fromtimestamp(float(timestamp))
                 active_tag = None
                 for tag in tag_data:
-                    if tag['rev_hash'] == log_hash and tag['suffix'] >= suffix:
+                    if tag['rev_hash'] == log_hash:
                         active_tag = tag
                 if active_tag is not None:
                     if changes_found is False:
                         increment_build = False
-                    if other_changes is True:
-                        changelog.append('* Internal updates')
-                    changelog.append('\n{0}{1}\n'.format(active_tag['version'],
-                                                         '-{0}.{1}'.format(active_tag['suffix'], active_tag['build']) if active_tag['suffix'] is not None else ''))
-                    other_changes = False
-                if re.match('^OVS\-[0-9]{1,5}', description):
-                    changelog.append('* {0} - {1}'.format(log_date.strftime('%Y-%m-%d'), description))
-                else:
-                    other_changes = True
                 changes_found = True
-            if other_changes is True:
-                changelog.append('* Other internal updates')
 
         # Build buildnumber
         print '  Generating build'
-        if release == 'experimental':
-            build = int(time.time())
-        elif release == 'master':
-            build = current_revision
+        if release in ['develop', 'experimental']:
+            build = revision_hash
         else:
             builds = sorted(tag['build'] for tag in tag_data if tag['version'] == version and tag['suffix'] == suffix)
             if len(builds) > 0:
@@ -233,23 +186,15 @@ class SourceCollector(object):
         # Save changelog
         if len(changelog) > 0:
             if increment_build is True:
-                changelog.insert(5, '\n{0}{1}\n'.format(version, '-{0}.{1}'.format(suffix, build) if suffix is not None else ''))
+                changelog.append('\n{0}{1}\n'.format(version, '-{0}.{1}'.format(suffix, build) if suffix is not None else ''))
         with open('{0}/CHANGELOG.txt'.format(repo_path_code), 'w') as changelog_file:
             changelog_file.write('\n'.join(changelog))
 
-        # Version string. Examples:
-        # * Experimental build
-        #     1.2.0-exp.<timestamp>
-        # * Master branch
-        #     1.2.0-rev.<revision>
-        # * Other branches (releases)
-        #     1.2.0-<release>.<build>
-
-        version_string = '{0}{1}'.format(version, '-{0}.{1}'.format(suffix, build) if suffix is not None else '')
+        version_string = '{0}{1}.{2}'.format(version, '-{0}'.format(suffix) if suffix is not None else '', build)
         print '  Full version: {0}'.format(version_string)
 
         # Tag revision
-        if release not in ['experimental', 'master'] and revision is None and increment_build is True:
+        if release == 'master' and increment_build is True:
             print '  Tagging revision'
             SourceCollector.run(command='git tag -a {0} {1} -m "Added tag {0} for changeset {1}"'.format(version_string, revision_hash),
                                 working_directory=repo_path_metadata)
@@ -282,7 +227,7 @@ class SourceCollector(object):
         """
         if not os.path.exists('{0}/.git'.format(path)):
             SourceCollector.run('git clone {0} {1}'.format(repo, path), path)
-        SourceCollector.run('git pull --all --prune', path)
+        SourceCollector.run('git pull --all --prune || true', path)
         SourceCollector.run('git checkout {0}'.format(revision), path)
         SourceCollector.run('git pull --prune', path)
         SourceCollector.run('git fetch --tags', path)

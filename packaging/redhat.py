@@ -159,7 +159,7 @@ class RPMPackager(object):
         package_path = SourceCollector.package_path.format(working_directory)
         redhat_folder = '{0}/redhat'.format(package_path)
 
-        package_info = settings['repositories']['packages']['redhat']
+        package_info = settings['repositories']['packages'].get('redhat', [])
         for destination in package_info:
             server = destination['ip']
             user = destination['user']

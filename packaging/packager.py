@@ -29,7 +29,6 @@ if __name__ == '__main__':
     parser.add_option('-p', '--product', dest='product')
     parser.add_option('-r', '--release', dest='release', default=None)
     parser.add_option('-e', '--revision', dest='revision', default=None)
-    parser.add_option('-s', '--suffix', dest='suffix', default=None)
     parser.add_option('--no-rpm', dest='rpm', action='store_false', default=True)
     parser.add_option('--no-deb', dest='deb', action='store_false', default=True)
     options, args = parser.parse_args()
@@ -37,14 +36,14 @@ if __name__ == '__main__':
     # 1. Collect sources
     metadata = SourceCollector.collect(product=options.product,
                                        release=options.release,
-                                       revision=options.revision,
-                                       suffix=options.suffix)
+                                       revision=options.revision)
 
     if metadata is not None:
+        add_package = options.revision != 'hotfix'
         # 2. Build & Upload packages
         if options.deb is True:
             DebianPackager.package(metadata)
-            DebianPackager.upload(metadata)
+            DebianPackager.upload(metadata, add=add_package)
         if options.rpm is True:
             RPMPackager.package(metadata)
-            RPMPackager.upload(metadata)
+            RPMPackager.upload(metadata)  # add not relevant for RPM

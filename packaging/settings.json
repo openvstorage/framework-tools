@@ -11,8 +11,9 @@
             "openvstorage": "git@github.com:openvstorage/framework.git",
             "openvstorage-backend": "git@github.com:openvstorage/framework-alba-plugin.git",
             "openvstorage-sdm": "git@github.com:openvstorage/alba-asdmanager.git",
-            "openvstorage-test": "git@github.com:openvstorage/integrationtests.git",
-            "openvstorage-health-check": "git@github.com:openvstorage/openvstorage-health-check.git"
+            "openvstorage-tests": "git@github.com:openvstorage/integrationtests.git",
+            "openvstorage-health-check": "git@github.com:openvstorage/openvstorage-health-check.git",
+            "automation-lib": "git@github.com:openvstorage/automation-lib.git"
         },
         "packages": {
             "debian": [

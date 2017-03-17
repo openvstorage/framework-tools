@@ -89,7 +89,7 @@ class DebianPackager(object):
                             working_directory='{0}/{1}-{2}'.format(debian_folder, package_name, version_string))
 
     @staticmethod
-    def upload(metadata):
+    def upload(metadata, add):
         """
         Uploads a given set of packages
         """
@@ -135,7 +135,11 @@ class DebianPackager(object):
                     scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
                     SourceCollector.run(command=scp_command,
                                         working_directory=debs_path)
-                print '    Adding package to repo'
-                remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, release, destination_path)
-                SourceCollector.run(command=remote_command,
-                                    working_directory=debs_path)
+                if add is True:
+                    print '    Adding package to repo'
+                    remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, release, destination_path)
+                    SourceCollector.run(command=remote_command,
+                                        working_directory=debs_path)
+                else:
+                    print '    NOT adding package to repo'
+                    print '    Package can be found at: {0}'.format(destination_path)

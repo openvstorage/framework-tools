@@ -16,5 +16,5 @@ Where:
 
 * *product*: The product name that needs to be packaged. Using ```settings.json``` it refers to a repository that will be packaged
 * *release*: The name of the release to be packaged. Using ```settings.json``` it refers to a branch on the repository, as in the Open vStorage repositories, every release has its own branch. Using the ```branch_map``` data in the settings file, the branchname-releasename mapping can be altered.
-* *revision*: To build a specific revision. If this parameter is given, the ```release``` parameter must be ```experimental```.
+* *revision*: To build a specific revision. If this parameter is given, the ```release``` parameter must be ```experimental``` or ```hotfix```.
 * The ```--no-rpm``` and ```--no-deb``` prevent these package formats from being generated. If both are passed, only the source archive will be generated.

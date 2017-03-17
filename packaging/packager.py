@@ -39,10 +39,11 @@ if __name__ == '__main__':
                                        revision=options.revision)
 
     if metadata is not None:
+        add_package = options.revision != 'hotfix'
         # 2. Build & Upload packages
         if options.deb is True:
             DebianPackager.package(metadata)
-            DebianPackager.upload(metadata)
+            DebianPackager.upload(metadata, add=add_package)
         if options.rpm is True:
             RPMPackager.package(metadata)
-            RPMPackager.upload(metadata)
+            RPMPackager.upload(metadata)  # add not relevant for RPM

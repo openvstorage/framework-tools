@@ -65,8 +65,9 @@ class SourceCollector(object):
         * 'develop': package develop branch
         * 'experimental': packages the given revision. The revision parameter must be passed
         * 'master': package master
+        * 'hotfix': packages the given revision, but treat it like a release package (aka like master)
         @param revision: Specifies an exact revision
-        * If the revision parameter is specified, the only valid release is 'experimental'.
+        * If the revision parameter is specified, the only valid releases are 'experimental' and 'hotfix'.
         """
 
         settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
@@ -78,10 +79,10 @@ class SourceCollector(object):
 
         print 'Validating input parameters'
         if revision is not None:
-            if release != 'experimental':
-                raise ValueError('If a revision is given, the release should be \'experimental\'')
-        elif release == 'experimental':
-            raise ValueError('The \'experimental\' release must have a revision')
+            if release not in ['experimental', 'hotfix']:
+                raise ValueError('If a revision is given, the release should be \'experimental\' or \'hotfix\'')
+        elif release in ['experimental', 'hotfix']:
+            raise ValueError('The \'experimental\' and \'hotfix\' releases must have a revision')
         if release is not None and release not in settings['releases']:
             raise ValueError('Release {0} is invalid. Should be in {1}'.format(release, settings['releases']))
 
@@ -99,10 +100,6 @@ class SourceCollector(object):
                                          revision=release if revision is None else revision,
                                          repo=repository)
 
-        suffix = None
-        if release in ['experimental', 'develop']:
-            suffix = 'dev.{0}'.format(int(time.time()))
-
         # Get current revision and date
         print '  Fetch current revision'
         revision_hash, revision_date = SourceCollector.run(command='git show HEAD --pretty --format="%h|%at" -s',
@@ -112,9 +109,8 @@ class SourceCollector(object):
 
         # Build version
         code_settings = SourceCollector.json_loads('{0}/packaging/settings.json'.format(repo_path_code))
-        version = '{0}.{1}.{2}'.format(code_settings['version']['major'],
-                                       code_settings['version']['minor'],
-                                       code_settings['version']['patch'])
+        version = '{0}.{1}'.format(code_settings['version']['major'],
+                                   code_settings['version']['minor'])
         print '  Version: {0}'.format(version)
 
         # Load tag information
@@ -125,29 +121,28 @@ class SourceCollector(object):
             parts = raw_tag.strip().split(' ')
             rev_hash = parts[0]
             tag = parts[1].replace('refs/tags/', '')
-            match = re.search('^(?P<version>[0-9]+?\.[0-9]+?\.[0-9]+?)((-(?P<suffix>.+))?\.(?P<build>[0-9]+))?$', tag)
+            match = re.search('^(?P<version>[0-9]+?\.[0-9]+?)\.(?P<build>[0-9]+?)([-.](.+))?$', tag)
             if match:
                 match_dict = match.groupdict()
                 tag_version = match_dict['version']
                 tag_build = match_dict['build']
-                tag_suffix = match_dict['suffix']
-                tag_data.append({'version': tag_version,
-                                 'build': int(tag_build),
-                                 'suffix': tag_suffix,
+                tag_data.append({'version': tag_version,   # 2.7  \__ 2.7.8
+                                 'build': int(tag_build),  # 8    /
                                  'rev_hash': rev_hash})
 
         # Build changelog
         increment_build = True
         changes_found = False
         changelog = []
-        if release == 'master':
+        if release in ['master', 'hotfix']:
             print '  Generating changelog'
             changelog.append(code_settings['product_name'])
             changelog.append('===============')
             changelog.append('')
             changelog.append('For the full changelog, see https://github.com/openvstorage')
             changelog.append('')
-            log = SourceCollector.run(command='git --no-pager log origin/{0} --date-order --pretty --format="%at|%H|%s"'.format(release),
+            log_target = 'master' if release == 'master' else revision
+            log = SourceCollector.run(command='git --no-pager log origin/{0} --date-order --pretty --format="%at|%H|%s"'.format(log_target),
                                       working_directory=repo_path_code)
             for log_line in log.strip().splitlines():
                 if 'Added tag ' in log_line and ' for changeset ' in log_line:
@@ -169,32 +164,33 @@ class SourceCollector(object):
 
         # Build buildnumber
         print '  Generating build'
-        if release in ['develop', 'experimental']:
-            build = revision_hash
-        else:
-            builds = sorted(tag['build'] for tag in tag_data if tag['version'] == version and tag['suffix'] == suffix)
-            if len(builds) > 0:
-                build = builds[-1]
-                if revision is None and increment_build is True:
-                    build += 1
-                else:
-                    print '    No need to increment build'
+        builds = sorted(tag['build'] for tag in tag_data if tag['version'] == version)
+        if len(builds) > 0:
+            build = builds[-1]
+            if (revision is None or release == 'hotfix') and increment_build is True:
+                build += 1
             else:
-                build = 1
+                print '    No need to increment build'
+        else:
+            build = 0
         print '    Build: {0}'.format(build)
+
+        suffix = None
+        if release in ['develop', 'experimental']:
+            suffix = 'dev.{0}.{1}'.format(int(time.time()), revision_hash)
 
         # Save changelog
         if len(changelog) > 0:
             if increment_build is True:
-                changelog.append('\n{0}{1}\n'.format(version, '-{0}.{1}'.format(suffix, build) if suffix is not None else ''))
+                changelog.append('\n{0}.{1}{2}\n'.format(version, build, '-{0}'.format(suffix) if suffix is not None else ''))
         with open('{0}/CHANGELOG.txt'.format(repo_path_code), 'w') as changelog_file:
             changelog_file.write('\n'.join(changelog))
 
-        version_string = '{0}{1}.{2}'.format(version, '-{0}'.format(suffix) if suffix is not None else '', build)
+        version_string = '{0}.{1}{2}'.format(version, build, '-{0}'.format(suffix) if suffix is not None else '')
         print '  Full version: {0}'.format(version_string)
 
         # Tag revision
-        if release == 'master' and increment_build is True:
+        if release in ['master', 'hotfix'] and increment_build is True:
             print '  Tagging revision'
             SourceCollector.run(command='git tag -a {0} {1} -m "Added tag {0} for changeset {1}"'.format(version_string, revision_hash),
                                 working_directory=repo_path_metadata)
@@ -216,6 +212,8 @@ class SourceCollector(object):
         print '    Archive: {0}/{1}_{2}.tar.gz'.format(package_path, code_settings['package_name'], version_string)
         print 'Done'
 
+        if release == 'hotfix':
+            release = 'master'
         if release in settings['branch_map']:
             release = settings['branch_map'][release]
         return product, release, version_string, revision_date, code_settings['package_name']

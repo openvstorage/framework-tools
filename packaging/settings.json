@@ -20,19 +20,28 @@
                 {
                     "ip": "172.20.3.16",
                     "user": "upload",
-                    "base_path": "/usr/share/repo"
+                    "base_path": "/usr/share/repo",
+                    "tags": ["community"]
                 },
                 {
                     "ip": "172.20.3.29",
                     "user": "upload",
-                    "base_path": "/usr/share/repo"
+                    "base_path": "/usr/share/repo",
+                    "tags": ["community"]
+                },
+                {
+                    "ip": "172.20.3.81",
+                    "user": "upload",
+                    "base_path": "/usr/share/repo",
+                    "tags": ["community", "enterprise"]
                 }
             ],
             "redhat": [
                 {
                     "ip": "172.20.3.17",
                     "user": "upload",
-                    "base_path": "/usr/share/repo/CentOS/7/x86_64"
+                    "base_path": "/usr/share/repo/CentOS/7/x86_64",
+                    "tags": ["community"]
                 }
             ]
         }

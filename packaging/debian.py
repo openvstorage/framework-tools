@@ -106,6 +106,7 @@ class DebianPackager(object):
             tags = destination.get('tags', [])
             if len(set(tags).intersection(package_tags)) == 0:
                 print 'Skipping {0} ({1}). {2} requested'.format(server, tags, package_tags)
+                continue
             user = destination['user']
             base_path = destination['base_path']
             upload_path = os.path.join(base_path, release)

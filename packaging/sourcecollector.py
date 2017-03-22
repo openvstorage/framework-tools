@@ -109,6 +109,7 @@ class SourceCollector(object):
 
         # Build version
         code_settings = SourceCollector.json_loads('{0}/packaging/settings.json'.format(repo_path_code))
+        destination_tags = code_settings.get('tags', [])
         version = '{0}.{1}'.format(code_settings['version']['major'],
                                    code_settings['version']['minor'])
         print '  Version: {0}'.format(version)
@@ -216,7 +217,7 @@ class SourceCollector(object):
             release = 'master'
         if release in settings['branch_map']:
             release = settings['branch_map'][release]
-        return product, release, version_string, revision_date, code_settings['package_name']
+        return product, release, version_string, revision_date, code_settings['package_name'], destination_tags
 
     @staticmethod
     def _git_checkout_to(path, revision, repo):

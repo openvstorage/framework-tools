@@ -41,7 +41,7 @@ class DebianPackager(object):
         Packages a given package.
         """
 
-        product, release, version_string, revision_date, package_name = metadata
+        product, release, version_string, revision_date, package_name, _ = metadata
 
         settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
@@ -94,7 +94,7 @@ class DebianPackager(object):
         Uploads a given set of packages
         """
 
-        product, release, version_string, revision_date, package_name = metadata
+        product, release, version_string, revision_date, package_name, package_tags = metadata
 
         settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
@@ -103,6 +103,9 @@ class DebianPackager(object):
         package_info = settings['repositories']['packages'].get('debian', [])
         for destination in package_info:
             server = destination['ip']
+            tags = destination.get('tags', [])
+            if len(set(tags).intersection(package_tags)) == 0:
+                print 'Skipping {0} ({1}). {2} requested'.format(server, tags, package_tags)
             user = destination['user']
             base_path = destination['base_path']
             upload_path = os.path.join(base_path, release)

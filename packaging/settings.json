@@ -14,7 +14,8 @@
             "openvstorage-test": "git@github.com:openvstorage/integrationtests.git",
             "openvstorage-health-check": "git@github.com:openvstorage/openvstorage-health-check.git",
             "openvstorage-automation-lib": "git@github.com:openvstorage/automation-lib.git",
-            "openvstorage-setup-runner": "git@github.com:openvstorage/setup-runner.git"
+            "openvstorage-setup-runner": "git@github.com:openvstorage/setup-runner.git",
+            "hprm-manager": "git@github.com:openvstorage/hprm-manager.git"
         },
         "packages": {
             "debian": [

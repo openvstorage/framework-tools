@@ -8,15 +8,16 @@
     ],
     "repositories": {
         "code": {
+            "hprm-manager": "git@github.com:openvstorage/hprm-manager.git",
             "openvstorage": "git@github.com:openvstorage/framework.git",
+            "openvstorage-automation-lib": "git@github.com:openvstorage/automation-lib.git",
             "openvstorage-backend": "git@github.com:openvstorage/framework-alba-plugin.git",
             "openvstorage-extensions": "git@github.com:openvstorage/framework-extensions.git",
-            "openvstorage-sdm": "git@github.com:openvstorage/alba-asdmanager.git",
-            "openvstorage-test": "git@github.com:openvstorage/integrationtests.git",
             "openvstorage-health-check": "git@github.com:openvstorage/openvstorage-health-check.git",
-            "openvstorage-automation-lib": "git@github.com:openvstorage/automation-lib.git",
+            "openvstorage-iscsi": "git@github.com:openvstorage/framework-iscsi-plugin.git",
+            "openvstorage-sdm": "git@github.com:openvstorage/alba-asdmanager.git",
             "openvstorage-setup-runner": "git@github.com:openvstorage/setup-runner.git",
-            "hprm-manager": "git@github.com:openvstorage/hprm-manager.git"
+            "openvstorage-test": "git@github.com:openvstorage/integrationtests.git"
         },
         "packages": {
             "debian": [

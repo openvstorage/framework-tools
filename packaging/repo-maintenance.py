@@ -54,8 +54,15 @@ if __name__ == '__main__':
             for package in packages:
                 deb = package.replace('{0}/{1}/'.format(base_path, release), '')
                 name, version, _ = deb.split('_', 2)
-                if options.skip is not None and name.startswith(options.skip):
-                    continue
+                if options.skip is not None:
+                    should_skip = False
+                    skips = options.skip.split(',')
+                    for skip in skips:
+                        if name.startswith(options.skip):
+                            should_skip = True
+                            break
+                    if should_skip is True:
+                        continue
 
                 if name in package_map:
                     if LooseVersion(version) > LooseVersion(package_map[name][0]):

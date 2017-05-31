@@ -20,6 +20,10 @@
             "openvstorage-setup-runner": "git@github.com:openvstorage/setup-runner.git",
             "openvstorage-test": "git@github.com:openvstorage/integrationtests.git"
         },
+        "exclude_builds": {
+            "iscsi-manager": ["rpm"],
+            "openvstorage-iscsi-plugin": ["rpm"]
+        },
         "packages": {
             "debian": [
                 {

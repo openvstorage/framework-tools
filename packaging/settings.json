@@ -15,7 +15,7 @@
             "openvstorage-backend": "git@github.com:openvstorage/framework-alba-plugin.git",
             "openvstorage-extensions": "git@github.com:openvstorage/framework-extensions.git",
             "openvstorage-health-check": "git@github.com:openvstorage/openvstorage-health-check.git",
-            "openvstorage-iscsi": "git@github.com:openvstorage/framework-iscsi-plugin.git",
+            "openvstorage-iscsi-plugin": "git@github.com:openvstorage/framework-iscsi-plugin.git",
             "openvstorage-sdm": "git@github.com:openvstorage/alba-asdmanager.git",
             "openvstorage-setup-runner": "git@github.com:openvstorage/setup-runner.git",
             "openvstorage-test": "git@github.com:openvstorage/integrationtests.git"

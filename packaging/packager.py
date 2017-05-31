@@ -18,6 +18,7 @@
 Packager module
 """
 
+import os
 from optparse import OptionParser
 from sourcecollector import SourceCollector
 from debian import DebianPackager
@@ -34,6 +35,7 @@ if __name__ == '__main__':
     options, args = parser.parse_args()
 
     # 1. Collect sources
+    settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
     metadata = SourceCollector.collect(product=options.product,
                                        release=options.release,
                                        revision=options.revision)
@@ -41,9 +43,9 @@ if __name__ == '__main__':
     if metadata is not None:
         add_package = options.revision != 'hotfix'
         # 2. Build & Upload packages
-        if options.deb is True:
+        if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
             DebianPackager.package(metadata)
             DebianPackager.upload(metadata, add=add_package)
-        if options.rpm is True:
+        if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
             RPMPackager.package(metadata)
             RPMPackager.upload(metadata)  # add not relevant for RPM

@@ -40,68 +40,74 @@ if __name__ == '__main__':
 
         print 'Processing {0}@{1}'.format(user, server)
 
-        from_package_map = {}
-        to_package_map = {}
-
         print '  Reading releases'
-        for release, package_map in {options.from_release: from_package_map,
-                                     options.to_release: to_package_map}.iteritems():
-            print '    {0}'.format(release)
 
-            ls_command = "ssh {0}@{1} 'ls {2}/{3}/*.deb'".format(user, server, base_path, release)
-            packages = SourceCollector.run(command=ls_command,
+        source_package_map = {}
+        destination_package_map = {}
+        for release, package_map in {options.from_release: source_package_map,
+                                     options.to_release: destination_package_map}.iteritems():
+            print '    {0} repo'.format(release)
+
+            repo_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian list {3}'".format(
+                user, server, base_path, release
+            )
+            packages = SourceCollector.run(command=repo_command,
                                            working_directory='/').strip().splitlines()
             for package in packages:
-                deb = package.replace('{0}/{1}/'.format(base_path, release), '')
-                name, version, _ = deb.split('_', 2)
+                _, name, version = package.split(' ')
                 if options.skip is not None:
-                    should_skip = False
-                    skips = options.skip.split(',')
-                    for skip in skips:
-                        if name.startswith(options.skip):
-                            should_skip = True
-                            break
-                    if should_skip is True:
+                    skips = tuple(options.skip.split(','))
+                    if name.startswith(skips):
                         continue
 
                 if name in package_map:
                     if LooseVersion(version) > LooseVersion(package_map[name][0]):
-                        package_map[name] = (version, package, deb)
+                        package_map[name] = version
                 else:
-                    package_map[name] = (version, package, deb)
+                    package_map[name] = version
+
+        package_map = {}
+        for release in [options.from_release, options.to_release, 'upstream']:
+            print '    package folder for {0}'.format(release)
+
+            ls_command = "ssh {0}@{1} 'ls {2}/{3}/*.*deb'".format(user, server, base_path, release)
+            packages = SourceCollector.run(command=ls_command,
+                                           working_directory='/').strip().splitlines()
+            for package in packages:
+                deb = package.replace('{0}/{1}/'.format(base_path, release), '')
+                if '_' not in deb and release == 'upstream':
+                    continue  # Unparsable upstream packages
+                name, version, _ = deb.split('_', 2)
+                if options.skip is not None:
+                    skips = tuple(options.skip.split(','))
+                    if name.startswith(skips):
+                        continue
+
+                if name in package_map:
+                    if LooseVersion(version) > LooseVersion(package_map[name][0]):
+                        package_map[name] = (version, package)
+                else:
+                    package_map[name] = (version, package)
 
         print '  Adding packages'
-        for package in from_package_map:
-            package_file_path = from_package_map[package][1]
-            package_file = from_package_map[package][2]
-            add = False
-            older = False
-            if package in to_package_map:
-                if LooseVersion(from_package_map[package][0]) > LooseVersion(to_package_map[package][0]):
-                    add = True
-                    older = True
-            else:
-                add = True
-            if add is True:
+        for package in source_package_map:
+            source_version = source_package_map[package]
+            destination_version = destination_package_map.get(package)
+            if destination_version is None or LooseVersion(source_version) > LooseVersion(destination_version):
+                deb_version, deb_location = package_map.get(package, (None, None))
+                if deb_location is not None and deb_location.endswith('.ddeb'):
+                    continue  # We don't care about debug packages
                 print '    {0} need to be copied as {1} is newer than {2}'.format(
-                    package, from_package_map[package][0], to_package_map.get(package, ['(none)'])[0]
+                    package, source_version, '(none)' if destination_version is None else destination_version
                 )
-                cp_command = "ssh {0}@{1} 'cp {2} {3}/{4}/'".format(
-                    user, server, package_file_path, base_path, options.to_release
-                )
-                SourceCollector.run(command=cp_command,
-                                    working_directory='/')
-                destination_path = '{0}/{1}/{2}'.format(base_path, options.to_release, package_file)
+                if deb_version is None or deb_version != source_version:
+                    print '        Warning: Could not locate the deb-file. Please update it manually.'.format(
+                        package, source_version
+                    )
+                    continue
+
                 repo_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(
-                    user, server, base_path, options.to_release, destination_path
+                    user, server, base_path, options.to_release, deb_location
                 )
                 SourceCollector.run(command=repo_command,
                                     working_directory='/')
-                if older is True:
-                    print '    Removing old package'
-                    old_path = '{0}/{1}/{2}'.format(base_path, options.to_release, to_package_map[package][2])
-                    rm_command = "ssh {0}@{1} 'rm {4}'".format(
-                        user, server, base_path, options.to_release, old_path
-                    )
-                    SourceCollector.run(command=rm_command,
-                                        working_directory='/')

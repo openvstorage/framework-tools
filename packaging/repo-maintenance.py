@@ -56,13 +56,8 @@ if __name__ == '__main__':
             for package in packages:
                 _, name, version = package.split(' ')
                 if options.skip is not None:
-                    should_skip = False
-                    skips = options.skip.split(',')
-                    for skip in skips:
-                        if name.startswith(options.skip):
-                            should_skip = True
-                            break
-                    if should_skip is True:
+                    skips = tuple(options.skip.split(','))
+                    if name.startswith(skips):
                         continue
 
                 if name in package_map:
@@ -84,13 +79,8 @@ if __name__ == '__main__':
                     continue  # Unparsable upstream packages
                 name, version, _ = deb.split('_', 2)
                 if options.skip is not None:
-                    should_skip = False
-                    skips = options.skip.split(',')
-                    for skip in skips:
-                        if name.startswith(options.skip):
-                            should_skip = True
-                            break
-                    if should_skip is True:
+                    skips = tuple(options.skip.split(','))
+                    if name.startswith(skips):
                         continue
 
                 if name in package_map:

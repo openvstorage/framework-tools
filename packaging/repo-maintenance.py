@@ -60,6 +60,9 @@ if __name__ == '__main__':
                     if name.startswith(skips):
                         continue
 
+                if ':' in version:
+                    version = version.split(':', 1)[1]
+
                 if name in package_map:
                     if LooseVersion(version) > LooseVersion(package_map[name][0]):
                         package_map[name] = version

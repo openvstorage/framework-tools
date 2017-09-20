@@ -46,6 +46,6 @@ if __name__ == '__main__':
         if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
             DebianPackager.package(metadata)
             DebianPackager.upload(metadata, add=add_package)
-#        if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
-#            RPMPackager.package(metadata)
-#            RPMPackager.upload(metadata)  # add not relevant for RPM
+        if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
+            RPMPackager.package(metadata)
+            RPMPackager.upload(metadata)  # add not relevant for RPM

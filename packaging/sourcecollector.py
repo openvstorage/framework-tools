@@ -32,14 +32,13 @@ class SourceCollector(object):
 
     Responsible for creating a source archive which will contain:
     * All sources for that version
-    * Versioning metadata
+    * Metadata regarding the version
     * Full changelog
-    It will also update the repo with all required versioning tags, if appropriate
+    It will also update the repo with all required version tags, if appropriate
     """
-
-    package_path = '{0}/package'
-    repo_path_code = '{0}/code'
-    repo_path_metadata = '{0}/metadata'
+    path_code = '{0}/code'
+    path_package = '{0}/package'
+    path_metadata = '{0}/metadata'
 
     def __init__(self):
         """
@@ -70,14 +69,8 @@ class SourceCollector(object):
         * If the revision parameter is specified, the only valid releases are 'experimental' and 'hotfix'.
         """
 
-        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
-        repository = settings['repositories']['code'][product]
-        working_directory = settings['base_path'].format(product)
-        repo_path_code = SourceCollector.repo_path_code.format(working_directory)
-        repo_path_metadata = SourceCollector.repo_path_metadata.format(working_directory)
-        package_path = SourceCollector.package_path.format(working_directory)
-
         print 'Validating input parameters'
+        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         if revision is not None:
             if release not in ['experimental', 'hotfix']:
                 raise ValueError('If a revision is given, the release should be \'experimental\' or \'hotfix\'')
@@ -86,39 +79,50 @@ class SourceCollector(object):
         if release is not None and release not in settings['releases']:
             raise ValueError('Release {0} is invalid. Should be in {1}'.format(release, settings['releases']))
 
+        working_directory = settings['base_path'].format(product)
+        print 'Working directory: {0}'.format(working_directory)
+
+        path_code = SourceCollector.path_code.format(working_directory)
+        path_package = SourceCollector.path_package.format(working_directory)
+        path_metadata = SourceCollector.path_metadata.format(working_directory)
+
         print 'Collecting sources'
-        for directory in [repo_path_code, repo_path_metadata, package_path]:
+        for directory in [path_code, path_metadata, path_package]:
             if not os.path.exists(directory):
+                print 'Creating directory {0}'.format(directory)
                 os.makedirs(directory)
 
         # Update the metadata repo
-        print '  Updating metadata'
-        SourceCollector._git_checkout_to(path=repo_path_metadata,
+        print 'Updating metadata'
+        repository = settings['repositories']['code'][product]
+        print 'Checking out master at {0}'.format(path_metadata)
+        SourceCollector._git_checkout_to(path=path_metadata,
                                          revision='master',
                                          repo=repository)
-        SourceCollector._git_checkout_to(path=repo_path_code,
+        print 'Checking out {0} at {1}'.format(release if revision is None else revision, path_code)
+        SourceCollector._git_checkout_to(path=path_code,
                                          revision=release if revision is None else revision,
                                          repo=repository)
 
         # Get current revision and date
-        print '  Fetch current revision'
+        print 'Fetch current revision'
         revision_hash, revision_date = SourceCollector.run(command='git show HEAD --pretty --format="%h|%at" -s',
-                                                           working_directory=repo_path_code).strip().split('|')
+                                                           working_directory=path_code).strip().split('|')
         revision_date = datetime.fromtimestamp(float(revision_date))
-        print '    Revision: {0}'.format(revision_hash)
+        print 'Revision hash: {0}'.format(revision_hash)
+        print 'Revision date: {0}'.format(revision_date)
 
         # Build version
-        code_settings = SourceCollector.json_loads('{0}/packaging/settings.json'.format(repo_path_code))
-        destination_tags = code_settings.get('tags', [])
+        code_settings = SourceCollector.json_loads('{0}/packaging/settings.json'.format(path_code))
         version = '{0}.{1}'.format(code_settings['version']['major'],
                                    code_settings['version']['minor'])
-        print '  Version: {0}'.format(version)
+        print 'Version: {0}'.format(version)
 
         # Load tag information
         tag_data = []
-        print '  Loading tags'
+        print 'Loading tags'
         for raw_tag in SourceCollector.run(command='git show-ref --tags',
-                                           working_directory=repo_path_metadata).splitlines():
+                                           working_directory=path_metadata).splitlines():
             parts = raw_tag.strip().split(' ')
             rev_hash = parts[0]
             tag = parts[1].replace('refs/tags/', '')
@@ -136,7 +140,7 @@ class SourceCollector(object):
         changes_found = False
         changelog = []
         if release in ['master', 'hotfix']:
-            print '  Generating changelog'
+            print 'Generating changelog'
             changelog.append(code_settings['product_name'])
             changelog.append('===============')
             changelog.append('')
@@ -144,7 +148,7 @@ class SourceCollector(object):
             changelog.append('')
             log_target = 'master' if release == 'master' else revision
             log = SourceCollector.run(command='git --no-pager log origin/{0} --date-order --pretty --format="%at|%H|%s"'.format(log_target),
-                                      working_directory=repo_path_code)
+                                      working_directory=path_code)
             for log_line in log.strip().splitlines():
                 if 'Added tag ' in log_line and ' for changeset ' in log_line:
                     continue
@@ -163,61 +167,62 @@ class SourceCollector(object):
                         increment_build = False
                 changes_found = True
 
-        # Build buildnumber
-        print '  Generating build'
+        # Build build_number
+        print 'Generating build'
         builds = sorted(tag['build'] for tag in tag_data if tag['version'] == version)
         if len(builds) > 0:
             build = builds[-1]
             if (revision is None or release == 'hotfix') and increment_build is True:
                 build += 1
             else:
-                print '    No need to increment build'
+                print 'No need to increment build'
         else:
             build = 0
-        print '    Build: {0}'.format(build)
+        print 'Build: {0}'.format(build)
 
         suffix = None
         if release in ['develop', 'experimental']:
             suffix = 'dev.{0}.{1}'.format(int(time.time()), revision_hash)
 
         # Save changelog
+        print 'Writing CHANGELOG file'
         if len(changelog) > 0:
             if increment_build is True:
                 changelog.append('\n{0}.{1}{2}\n'.format(version, build, '-{0}'.format(suffix) if suffix is not None else ''))
-        with open('{0}/CHANGELOG.txt'.format(repo_path_code), 'w') as changelog_file:
+        with open('{0}/CHANGELOG.txt'.format(path_code), 'w') as changelog_file:
             changelog_file.write('\n'.join(changelog))
 
         version_string = '{0}.{1}{2}'.format(version, build, '-{0}'.format(suffix) if suffix is not None else '')
-        print '  Full version: {0}'.format(version_string)
+        print 'Full version: {0}'.format(version_string)
 
         # Tag revision
         if release in ['master', 'hotfix'] and increment_build is True:
-            print '  Tagging revision'
+            print 'Tagging revision'
             SourceCollector.run(command='git tag -a {0} {1} -m "Added tag {0} for changeset {1}"'.format(version_string, revision_hash),
-                                working_directory=repo_path_metadata)
+                                working_directory=path_metadata)
             SourceCollector.run(command='git push origin --tags',
-                                working_directory=repo_path_metadata)
+                                working_directory=path_metadata)
 
         # Building archive
-        print '  Building archive'
-        SourceCollector.run(command="tar -czf {0}/{1}_{2}.tar.gz {3}".format(package_path,
+        print 'Building archive'
+        SourceCollector.run(command="tar -czf {0}/{1}_{2}.tar.gz {3}".format(path_package,
                                                                              code_settings['package_name'],
                                                                              version_string,
                                                                              code_settings['source_contents'].format(
                                                                                  code_settings['package_name'],
                                                                                  version_string)
                                                                              ),
-                            working_directory=repo_path_code)
+                            working_directory=path_code)
         SourceCollector.run(command='rm -f CHANGELOG.txt',
-                            working_directory=repo_path_code)
-        print '    Archive: {0}/{1}_{2}.tar.gz'.format(package_path, code_settings['package_name'], version_string)
+                            working_directory=path_code)
+        print 'Archive: {0}/{1}_{2}.tar.gz'.format(path_package, code_settings['package_name'], version_string)
         print 'Done'
 
         if release == 'hotfix':
             release = 'master'
         if release in settings['branch_map']:
             release = settings['branch_map'][release]
-        return product, release, version_string, revision_date, code_settings['package_name'], destination_tags
+        return product, release, version_string, revision_date, code_settings['package_name'], code_settings.get('tags', [])
 
     @staticmethod
     def _git_checkout_to(path, revision, repo):

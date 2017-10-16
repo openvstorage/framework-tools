@@ -45,17 +45,17 @@ class RPMPackager(object):
 
         settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
-        repo_path_code = SourceCollector.repo_path_code.format(working_directory)
-        package_path = SourceCollector.package_path.format(working_directory)
+        path_code = SourceCollector.path_code.format(working_directory)
+        path_package = SourceCollector.path_package.format(working_directory)
 
         # Prepare
-        redhat_folder = '{0}/redhat'.format(package_path)
+        redhat_folder = '{0}/redhat'.format(path_package)
         if os.path.exists(redhat_folder):
             shutil.rmtree(redhat_folder)
         os.mkdir(redhat_folder)
 
         # extract tar.gz to redhat_folder
-        shutil.copyfile('{0}/{1}_{2}.tar.gz'.format(package_path, package_name, version_string),
+        shutil.copyfile('{0}/{1}_{2}.tar.gz'.format(path_package, package_name, version_string),
                         '{0}/{1}_{2}.orig.tar.gz'.format(redhat_folder, package_name, version_string))
         # /<pp>/debian/<packagename>-1.2.3/...
         SourceCollector.run(command='tar -xzf {0}_{1}.orig.tar.gz'.format(package_name, version_string),
@@ -63,13 +63,13 @@ class RPMPackager(object):
         code_source_path = '{0}/{1}-{2}'.format(redhat_folder, package_name, version_string)
 
         # copy packaging
-        source_packaging_path = os.path.join(repo_path_code, 'packaging')
+        source_packaging_path = os.path.join(path_code, 'packaging')
         dest_packaging_path = os.path.join(code_source_path, 'packaging')
         if os.path.exists(source_packaging_path):
             shutil.copytree(source_packaging_path, dest_packaging_path)
 
         # load config
-        config_dir = '{0}/packaging/redhat/cfgs'.format(repo_path_code)
+        config_dir = '{0}/packaging/redhat/cfgs'.format(path_code)
         packages = os.listdir(config_dir)
         for package in packages:
             package_filename = '{0}/{1}'.format(config_dir, package)
@@ -88,7 +88,7 @@ class RPMPackager(object):
                     depends.append('-d "{0}"'.format(depends_package.strip()))
                 depends = ' '.join(depends)
 
-            package_root_path = os.path.join(package_path, package_name)
+            package_root_path = os.path.join(path_package, package_name)
             if os.path.exists(package_root_path):
                 shutil.rmtree(package_root_path)
             os.mkdir(package_root_path)
@@ -156,7 +156,7 @@ class RPMPackager(object):
 
         settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
-        package_path = SourceCollector.package_path.format(working_directory)
+        package_path = SourceCollector.path_package.format(working_directory)
         redhat_folder = '{0}/redhat'.format(package_path)
 
         package_info = settings['repositories']['packages'].get('redhat', [])

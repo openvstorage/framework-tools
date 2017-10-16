@@ -45,29 +45,29 @@ class DebianPackager(object):
 
         settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
-        repo_path_code = SourceCollector.repo_path_code.format(working_directory)
-        package_path = SourceCollector.package_path.format(working_directory)
+        path_code = SourceCollector.path_code.format(working_directory)
+        path_package = SourceCollector.path_package.format(working_directory)
 
         # Prepare
         # /<pp>/debian
-        debian_folder = '{0}/debian'.format(package_path)
+        debian_folder = '{0}/debian'.format(path_package)
         if os.path.exists(debian_folder):
             shutil.rmtree(debian_folder)
         # /<rp>/packaging/debian -> /<pp>/debian
-        shutil.copytree('{0}/packaging/debian'.format(repo_path_code), debian_folder)
+        shutil.copytree('{0}/packaging/debian'.format(path_code), debian_folder)
 
         # Rename tgz
-        # /<pp>/<packagename>_1.2.3.tar.gz -> /<pp>/debian/<packagename>_1.2.3.orig.tar.gz
-        shutil.copyfile('{0}/{1}_{2}.tar.gz'.format(package_path, package_name, version_string),
+        # /<pp>/<package name>_1.2.3.tar.gz -> /<pp>/debian/<package name>_1.2.3.orig.tar.gz
+        shutil.copyfile('{0}/{1}_{2}.tar.gz'.format(path_package, package_name, version_string),
                         '{0}/{1}_{2}.orig.tar.gz'.format(debian_folder, package_name, version_string))
-        # /<pp>/debian/<packagename>-1.2.3/...
+        # /<pp>/debian/<package name>-1.2.3/...
         SourceCollector.run(command='tar -xzf {0}_{1}.orig.tar.gz'.format(package_name, version_string),
                             working_directory=debian_folder)
 
         # Move the debian package metadata into the extracted source
-        # /<pp>/debian/debian -> /<pp>/debian/<packagename>-1.2.3/
+        # /<pp>/debian/debian -> /<pp>/debian/<package name>-1.2.3/
         SourceCollector.run(command='mv {0}/debian {0}/{1}-{2}/'.format(debian_folder, package_name, version_string),
-                            working_directory=package_path)
+                            working_directory=path_package)
 
         # Build changelog entry
         with open('{0}/{1}-{2}/debian/changelog'.format(debian_folder, package_name, version_string), 'w') as changelog_file:
@@ -80,7 +80,7 @@ class DebianPackager(object):
 
         # Some more tweaks
         SourceCollector.run(command='chmod 770 {0}/{1}-{2}/debian/rules'.format(debian_folder, package_name, version_string),
-                            working_directory=package_path)
+                            working_directory=path_package)
         SourceCollector.run(command="sed -i -e 's/__NEW_VERSION__/{0}/' *.*".format(version_string),
                             working_directory='{0}/{1}-{2}/debian'.format(debian_folder, package_name, version_string))
 
@@ -98,7 +98,7 @@ class DebianPackager(object):
 
         settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
         working_directory = settings['base_path'].format(product)
-        package_path = SourceCollector.package_path.format(working_directory)
+        package_path = SourceCollector.path_package.format(working_directory)
 
         package_info = settings['repositories']['packages'].get('debian', [])
         for destination in package_info:
@@ -116,8 +116,7 @@ class DebianPackager(object):
             debs_path = os.path.join(package_path, 'debian')
             deb_packages = [filename for filename in os.listdir(debs_path) if filename.endswith('.deb')]
 
-            create_releasename_command = "ssh {0}@{1} 'mkdir -p {2}'".format(user, server, upload_path)
-            SourceCollector.run(command=create_releasename_command,
+            SourceCollector.run(command="ssh {0}@{1} 'mkdir -p {2}'".format(user, server, upload_path),
                                 working_directory=debs_path)
 
             for deb_package in deb_packages:

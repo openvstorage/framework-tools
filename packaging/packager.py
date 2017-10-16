@@ -41,7 +41,7 @@ if __name__ == '__main__':
                                        revision=options.revision)
 
     if metadata is not None:
-        add_package = options.revision != 'hotfix'
+        add_package = options.release != 'hotfix'
         # 2. Build & Upload packages
         if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
             DebianPackager.package(metadata)

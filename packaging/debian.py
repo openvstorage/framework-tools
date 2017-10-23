@@ -89,7 +89,7 @@ class DebianPackager(object):
                             working_directory='{0}/{1}-{2}'.format(debian_folder, package_name, version_string))
 
     @staticmethod
-    def upload(metadata, add):
+    def upload(metadata, add, hotfix_release=None):
         """
         Uploads a given set of packages
         """
@@ -138,9 +138,21 @@ class DebianPackager(object):
                     scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
                     SourceCollector.run(command=scp_command,
                                         working_directory=debs_path)
-                if add is True:
+                if add is True:  # No hotfix
                     print '    Adding package to repo'
                     remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, release, destination_path)
+                    SourceCollector.run(command=remote_command,
+                                        working_directory=debs_path)
+                elif hotfix_release:  # Hotfix
+                    print '    Uploading package to hotfix release {0}'.format(hotfix_release)
+                    source_path = os.path.join(debs_path, deb_package)
+                    destination_path = os.path.join(base_path, hotfix_release, deb_package)
+
+                    scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
+                    SourceCollector.run(command=scp_command,
+                                        working_directory=debs_path)
+                    print '    Adding package to repo'
+                    remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, hotfix_release, destination_path)
                     SourceCollector.run(command=remote_command,
                                         working_directory=debs_path)
                 else:

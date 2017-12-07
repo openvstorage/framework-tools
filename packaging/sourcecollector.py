@@ -47,7 +47,7 @@ class SourceCollector(object):
         raise NotImplementedError('SourceCollector is a static class')
 
     @staticmethod
-    def collect(product, release=None, revision=None):
+    def collect(product, release=None, revision=None, artifact_only=False):
         """
         Executes the source collecting logic
 
@@ -67,6 +67,8 @@ class SourceCollector(object):
         * 'hotfix': packages the given revision, but treat it like a release package (aka like master)
         @param revision: Specifies an exact revision
         * If the revision parameter is specified, the only valid releases are 'experimental' and 'hotfix'.
+        @param artifact_only: Specifies whether the package should only be built and not uploaded.
+        * The package name will contain a commit hash to distinguish different builds
         """
 
         print 'Validating input parameters'
@@ -139,7 +141,7 @@ class SourceCollector(object):
         increment_build = True
         changes_found = False
         changelog = []
-        if release in ['master', 'hotfix']:
+        if release in ['master', 'hotfix'] and artifact_only is False:
             print 'Generating changelog'
             changelog.append(code_settings['product_name'])
             changelog.append('===============')
@@ -181,7 +183,7 @@ class SourceCollector(object):
         print 'Build: {0}'.format(build)
 
         suffix = None
-        if release in ['develop', 'experimental']:
+        if release in ['develop', 'experimental'] or artifact_only is True:
             suffix = 'dev.{0}.{1}'.format(int(time.time()), revision_hash)
 
         # Save changelog
@@ -196,7 +198,7 @@ class SourceCollector(object):
         print 'Full version: {0}'.format(version_string)
 
         # Tag revision
-        if release in ['master', 'hotfix'] and increment_build is True:
+        if release in ['master', 'hotfix'] and increment_build is True and artifact_only is False:
             print 'Tagging revision'
             SourceCollector.run(command='git tag -a {0} {1} -m "Added tag {0} for changeset {1}"'.format(version_string, revision_hash),
                                 working_directory=path_metadata)

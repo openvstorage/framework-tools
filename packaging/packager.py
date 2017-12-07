@@ -31,6 +31,7 @@ if __name__ == '__main__':
     parser.add_option('-r', '--release', dest='release', default=None)
     parser.add_option('-e', '--revision', dest='revision', default=None)
     parser.add_option('-o', '--hotfix-release', dest='hotfix_release', default=None)
+    parser.add_option('-a', '--artifact-only', dest='artifact_only', default=False)
     parser.add_option('--no-rpm', dest='rpm', action='store_false', default=True)
     parser.add_option('--no-deb', dest='deb', action='store_false', default=True)
     options, args = parser.parse_args()
@@ -39,14 +40,17 @@ if __name__ == '__main__':
     settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
     metadata = SourceCollector.collect(product=options.product,
                                        release=options.release,
-                                       revision=options.revision)
+                                       revision=options.revision,
+                                       artifact_only=options.artifact_only)
 
     if metadata is not None:
         add_package = options.release != 'hotfix'
         # 2. Build & Upload packages
         if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
             DebianPackager.package(metadata)
-            DebianPackager.upload(metadata, add=add_package, hotfix_release=options.hotfix_release)
+            if options.artifact_only is False:
+                DebianPackager.upload(metadata, add=add_package, hotfix_release=options.hotfix_release)
         if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
             RPMPackager.package(metadata)
-            RPMPackager.upload(metadata)  # add not relevant for RPM
+            if options.artifact_only is False:
+                RPMPackager.upload(metadata)  # add not relevant for RPM

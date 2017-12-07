@@ -47,7 +47,31 @@ class SourceCollector(object):
         raise NotImplementedError('SourceCollector is a static class')
 
     @staticmethod
-    def collect(product, release=None, revision=None, artifact_only=False):
+    def get_settings():
+        """
+        Retrieves the current settings
+        :return: Settings dict
+        :rtype: dict
+        """
+        return SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+
+    @classmethod
+    def get_paths(cls, settings=None):
+        """
+        Returns the working directory, path to the code, path to the package and path to the metadata
+        :param settings: Settings to use, defaults to the provided settings in the settings.json
+        :return:
+        """
+        if settings is None:
+            settings = cls.get_settings()
+        working_directory = settings['base_path'].format(product)
+        path_code = SourceCollector.path_code.format(working_directory)
+        path_package = SourceCollector.path_package.format(working_directory)
+        path_metadata = SourceCollector.path_metadata.format(working_directory)
+        return working_directory, path_code, path_package, path_metadata
+
+    @classmethod
+    def collect(cls, product, release=None, revision=None, artifact_only=False):
         """
         Executes the source collecting logic
 
@@ -72,7 +96,7 @@ class SourceCollector(object):
         """
 
         print 'Validating input parameters'
-        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        settings = cls.get_settings()
         if revision is not None:
             if release not in ['experimental', 'hotfix']:
                 raise ValueError('If a revision is given, the release should be \'experimental\' or \'hotfix\'')
@@ -81,12 +105,8 @@ class SourceCollector(object):
         if release is not None and release not in settings['releases']:
             raise ValueError('Release {0} is invalid. Should be in {1}'.format(release, settings['releases']))
 
-        working_directory = settings['base_path'].format(product)
+        working_directory, path_code, path_package, path_metadata = cls.get_paths(settings)
         print 'Working directory: {0}'.format(working_directory)
-
-        path_code = SourceCollector.path_code.format(working_directory)
-        path_package = SourceCollector.path_package.format(working_directory)
-        path_metadata = SourceCollector.path_metadata.format(working_directory)
 
         print 'Collecting sources'
         for directory in [path_code, path_metadata, path_package]:
@@ -246,17 +266,12 @@ class SourceCollector(object):
         if print_only is True:
             print command
         else:
-            cur_dir = os.getcwd()
-            os.chdir(working_directory)
             try:
-                return check_output(command, shell=True)
+                return check_output(command, shell=True, cwd=working_directory)
             except CalledProcessError as cpe:
                 # CalledProcessError doesn't include the output in its __str__
                 #  making debug harder
                 raise RuntimeError('{0}. \n Output: \n {1} \n'.format(cpe, cpe.output))
-            finally:
-                # return to previous directory, easier to test interactive
-                os.chdir(cur_dir)
 
     @staticmethod
     def json_loads(path):

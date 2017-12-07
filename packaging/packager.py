@@ -50,6 +50,8 @@ if __name__ == '__main__':
             DebianPackager.package(metadata)
             if options.artifact_only is False:
                 DebianPackager.upload(metadata, add=add_package, hotfix_release=options.hotfix_release)
+            else:
+                DebianPackager.prepare_artifact()
         if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
             RPMPackager.package(metadata)
             if options.artifact_only is False:

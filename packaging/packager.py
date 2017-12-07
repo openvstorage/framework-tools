@@ -51,7 +51,7 @@ if __name__ == '__main__':
             if options.artifact_only is False:
                 DebianPackager.upload(metadata, add=add_package, hotfix_release=options.hotfix_release)
             # Always store artifacts in jenkins too
-            DebianPackager.prepare_artifact()
+            DebianPackager.prepare_artifact(metadata)
         if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
             RPMPackager.package(metadata)
             if options.artifact_only is False:

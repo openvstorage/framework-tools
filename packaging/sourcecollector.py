@@ -56,9 +56,10 @@ class SourceCollector(object):
         return SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
 
     @classmethod
-    def get_paths(cls, settings=None):
+    def get_paths(cls, product, settings=None):
         """
         Returns the working directory, path to the code, path to the package and path to the metadata
+        :param product: Product to process
         :param settings: Settings to use, defaults to the provided settings in the settings.json
         :return:
         """
@@ -105,7 +106,7 @@ class SourceCollector(object):
         if release is not None and release not in settings['releases']:
             raise ValueError('Release {0} is invalid. Should be in {1}'.format(release, settings['releases']))
 
-        working_directory, path_code, path_package, path_metadata = cls.get_paths(settings)
+        working_directory, path_code, path_package, path_metadata = cls.get_paths(product, settings)
         print 'Working directory: {0}'.format(working_directory)
 
         print 'Collecting sources'

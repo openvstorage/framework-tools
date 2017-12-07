@@ -86,14 +86,15 @@ class DebianPackager(object):
         SourceCollector.run(command='dpkg-buildpackage',
                             working_directory='{0}/{1}-{2}'.format(debian_folder, package_name, version_string))
 
-    @staticmethod
-    def prepare_artifact():
+    @classmethod
+    def prepare_artifact(cls):
         """
         Prepares the current package to be stored as an artifact on Jenkins
         :return: None
         :rtype: NoneType
         """
         # Get the current workspace directy
+        debian_folder = cls.get_package_destination()
         workspace_folder = os.environ['WORKSPACE']
         artifact_folder = os.path.join(workspace_folder, 'artifacts')
         # Clear older artifacts

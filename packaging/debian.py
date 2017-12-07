@@ -35,22 +35,20 @@ class DebianPackager(object):
         """
         raise NotImplementedError('DebianPackager is a static class')
 
-    @staticmethod
-    def package(metadata):
+    @classmethod
+    def package(cls, metadata):
         """
         Packages a given package.
         """
 
         product, release, version_string, revision_date, package_name, _ = metadata
 
-        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
-        working_directory = settings['base_path'].format(product)
-        path_code = SourceCollector.path_code.format(working_directory)
-        path_package = SourceCollector.path_package.format(working_directory)
+        settings = SourceCollector.get_settings()
+        _, path_code, path_package, _ = SourceCollector.get_paths(settings)
 
         # Prepare
         # /<pp>/debian
-        debian_folder = '{0}/debian'.format(path_package)
+        debian_folder = cls.get_package_destination(settings)
         if os.path.exists(debian_folder):
             shutil.rmtree(debian_folder)
         # /<rp>/packaging/debian -> /<pp>/debian
@@ -88,17 +86,42 @@ class DebianPackager(object):
         SourceCollector.run(command='dpkg-buildpackage',
                             working_directory='{0}/{1}-{2}'.format(debian_folder, package_name, version_string))
 
-    @staticmethod
-    def upload(metadata, add, hotfix_release=None):
+    @classmethod
+    def prepare_artifact(cls):
+        """
+        Prepares the current package to be stored as an artifact on Jenkins
+        :return: None
+        :rtype: NoneType
+        """
+        # Get the current workspace directy
+        debian_folder = cls.get_package_destination()
+        workspace_folder = os.environ['WORKSPACE']
+        artifact_folder = os.path.join(workspace_folder, 'artifacts')
+        # Clear older artifacts
+        if os.path.exists(artifact_folder):
+            shutil.rmtree(artifact_folder)
+        shutil.copytree(debian_folder, artifact_folder)
+
+    @classmethod
+    def get_package_destination(cls, settings=None):
+        """
+        Return the directory where the packages will be placed
+        :param settings: Settings to use, defaults to the provided settings in the settings.json
+        :return: The path to the directory of the packages
+        """
+        _, _, path_package, _ = SourceCollector.get_paths(settings)
+        return os.path.join(path_package, 'debian')
+
+    @classmethod
+    def upload(cls, metadata, add, hotfix_release=None):
         """
         Uploads a given set of packages
         """
 
         product, release, version_string, revision_date, package_name, package_tags = metadata
 
-        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
-        working_directory = settings['base_path'].format(product)
-        package_path = SourceCollector.path_package.format(working_directory)
+        settings = SourceCollector.get_settings()
+        _, _, path_package, _ = SourceCollector.get_paths(settings)
 
         package_info = settings['repositories']['packages'].get('debian', [])
         for destination in package_info:
@@ -113,9 +136,8 @@ class DebianPackager(object):
             pool_path = os.path.join(base_path, 'debian/pool/main')
 
             print 'Publishing to {0}@{1}'.format(user, server)
-            debs_path = os.path.join(package_path, 'debian')
+            debs_path = cls.get_package_destination(settings)
             deb_packages = [filename for filename in os.listdir(debs_path) if filename.endswith('.deb')]
-
             SourceCollector.run(command="ssh {0}@{1} 'mkdir -p {2}'".format(user, server, upload_path),
                                 working_directory=debs_path)
 

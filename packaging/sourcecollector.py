@@ -47,7 +47,31 @@ class SourceCollector(object):
         raise NotImplementedError('SourceCollector is a static class')
 
     @staticmethod
-    def collect(product, release=None, revision=None):
+    def get_settings():
+        """
+        Retrieves the current settings
+        :return: Settings dict
+        :rtype: dict
+        """
+        return SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+
+    @classmethod
+    def get_paths(cls, settings=None):
+        """
+        Returns the working directory, path to the code, path to the package and path to the metadata
+        :param settings: Settings to use, defaults to the provided settings in the settings.json
+        :return:
+        """
+        if settings is None:
+            settings = cls.get_settings()
+        working_directory = settings['base_path'].format(product)
+        path_code = SourceCollector.path_code.format(working_directory)
+        path_package = SourceCollector.path_package.format(working_directory)
+        path_metadata = SourceCollector.path_metadata.format(working_directory)
+        return working_directory, path_code, path_package, path_metadata
+
+    @classmethod
+    def collect(cls, product, release=None, revision=None, artifact_only=False):
         """
         Executes the source collecting logic
 
@@ -67,10 +91,12 @@ class SourceCollector(object):
         * 'hotfix': packages the given revision, but treat it like a release package (aka like master)
         @param revision: Specifies an exact revision
         * If the revision parameter is specified, the only valid releases are 'experimental' and 'hotfix'.
+        @param artifact_only: Specifies whether the package should only be built and not uploaded.
+        * The package name will contain a commit hash to distinguish different builds
         """
 
         print 'Validating input parameters'
-        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
+        settings = cls.get_settings()
         if revision is not None:
             if release not in ['experimental', 'hotfix']:
                 raise ValueError('If a revision is given, the release should be \'experimental\' or \'hotfix\'')
@@ -79,12 +105,8 @@ class SourceCollector(object):
         if release is not None and release not in settings['releases']:
             raise ValueError('Release {0} is invalid. Should be in {1}'.format(release, settings['releases']))
 
-        working_directory = settings['base_path'].format(product)
+        working_directory, path_code, path_package, path_metadata = cls.get_paths(settings)
         print 'Working directory: {0}'.format(working_directory)
-
-        path_code = SourceCollector.path_code.format(working_directory)
-        path_package = SourceCollector.path_package.format(working_directory)
-        path_metadata = SourceCollector.path_metadata.format(working_directory)
 
         print 'Collecting sources'
         for directory in [path_code, path_metadata, path_package]:
@@ -139,7 +161,7 @@ class SourceCollector(object):
         increment_build = True
         changes_found = False
         changelog = []
-        if release in ['master', 'hotfix']:
+        if release in ['master', 'hotfix'] and artifact_only is False:
             print 'Generating changelog'
             changelog.append(code_settings['product_name'])
             changelog.append('===============')
@@ -181,7 +203,7 @@ class SourceCollector(object):
         print 'Build: {0}'.format(build)
 
         suffix = None
-        if release in ['develop', 'experimental']:
+        if release in ['develop', 'experimental'] or artifact_only is True:
             suffix = 'dev.{0}.{1}'.format(int(time.time()), revision_hash)
 
         # Save changelog
@@ -196,7 +218,7 @@ class SourceCollector(object):
         print 'Full version: {0}'.format(version_string)
 
         # Tag revision
-        if release in ['master', 'hotfix'] and increment_build is True:
+        if release in ['master', 'hotfix'] and increment_build is True and artifact_only is False:
             print 'Tagging revision'
             SourceCollector.run(command='git tag -a {0} {1} -m "Added tag {0} for changeset {1}"'.format(version_string, revision_hash),
                                 working_directory=path_metadata)
@@ -244,17 +266,12 @@ class SourceCollector(object):
         if print_only is True:
             print command
         else:
-            cur_dir = os.getcwd()
-            os.chdir(working_directory)
             try:
-                return check_output(command, shell=True)
+                return check_output(command, shell=True, cwd=working_directory)
             except CalledProcessError as cpe:
                 # CalledProcessError doesn't include the output in its __str__
                 #  making debug harder
                 raise RuntimeError('{0}. \n Output: \n {1} \n'.format(cpe, cpe.output))
-            finally:
-                # return to previous directory, easier to test interactive
-                os.chdir(cur_dir)
 
     @staticmethod
     def json_loads(path):

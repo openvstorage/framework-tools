@@ -48,7 +48,7 @@ class DebianPackager(object):
 
         # Prepare
         # /<pp>/debian
-        debian_folder = cls.get_package_destination(settings)
+        debian_folder = cls.get_package_destination(product, settings)
         if os.path.exists(debian_folder):
             shutil.rmtree(debian_folder)
         # /<rp>/packaging/debian -> /<pp>/debian
@@ -87,14 +87,16 @@ class DebianPackager(object):
                             working_directory='{0}/{1}-{2}'.format(debian_folder, package_name, version_string))
 
     @classmethod
-    def prepare_artifact(cls):
+    def prepare_artifact(cls, metadata):
         """
         Prepares the current package to be stored as an artifact on Jenkins
+        :param metadata: Metadata about the product
         :return: None
         :rtype: NoneType
         """
+        product, release, version_string, revision_date, package_name, _ = metadata
         # Get the current workspace directy
-        debian_folder = cls.get_package_destination()
+        debian_folder = cls.get_package_destination(product)
         workspace_folder = os.environ['WORKSPACE']
         artifact_folder = os.path.join(workspace_folder, 'artifacts')
         # Clear older artifacts
@@ -103,9 +105,10 @@ class DebianPackager(object):
         shutil.copytree(debian_folder, artifact_folder)
 
     @classmethod
-    def get_package_destination(cls, settings=None):
+    def get_package_destination(cls, product, settings=None):
         """
         Return the directory where the packages will be placed
+        :param product: The product to build
         :param settings: Settings to use, defaults to the provided settings in the settings.json
         :return: The path to the directory of the packages
         """
@@ -136,7 +139,7 @@ class DebianPackager(object):
             pool_path = os.path.join(base_path, 'debian/pool/main')
 
             print 'Publishing to {0}@{1}'.format(user, server)
-            debs_path = cls.get_package_destination(settings)
+            debs_path = cls.get_package_destination(product, settings)
             deb_packages = [filename for filename in os.listdir(debs_path) if filename.endswith('.deb')]
             SourceCollector.run(command="ssh {0}@{1} 'mkdir -p {2}'".format(user, server, upload_path),
                                 working_directory=debs_path)

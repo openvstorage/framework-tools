@@ -44,7 +44,7 @@ class DebianPackager(object):
         product, release, version_string, revision_date, package_name, _ = metadata
 
         settings = SourceCollector.get_settings()
-        _, path_code, path_package, _ = SourceCollector.get_paths(settings)
+        _, path_code, path_package, _ = SourceCollector.get_paths(product, settings)
 
         # Prepare
         # /<pp>/debian
@@ -109,7 +109,7 @@ class DebianPackager(object):
         :param settings: Settings to use, defaults to the provided settings in the settings.json
         :return: The path to the directory of the packages
         """
-        _, _, path_package, _ = SourceCollector.get_paths(settings)
+        _, _, path_package, _ = SourceCollector.get_paths(product, settings)
         return os.path.join(path_package, 'debian')
 
     @classmethod
@@ -121,7 +121,7 @@ class DebianPackager(object):
         product, release, version_string, revision_date, package_name, package_tags = metadata
 
         settings = SourceCollector.get_settings()
-        _, _, path_package, _ = SourceCollector.get_paths(settings)
+        _, _, path_package, _ = SourceCollector.get_paths(product, settings)
 
         package_info = settings['repositories']['packages'].get('debian', [])
         for destination in package_info:

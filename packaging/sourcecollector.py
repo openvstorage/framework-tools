@@ -203,7 +203,7 @@ class SourceCollector(object):
         print 'Build: {0}'.format(build)
 
         suffix = None
-        # Generate is suffix with the revision has when it is an artifact only build to distinguish different builds
+        # Generate a suffix for artifact-only builds or develop/experimental builds to distinguish them from release builds
         if release in ['develop', 'experimental'] or artifact_only is True:
             print 'Generating a suffix'
             suffix = 'dev.{0}.{1}'.format(int(time.time()), revision_hash)

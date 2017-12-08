@@ -95,7 +95,6 @@ class SourceCollector(object):
         @param artifact_only: Specifies whether the package should only be built and not uploaded.
         * The package name will contain a commit hash to distinguish different builds
         """
-
         print 'Validating input parameters'
         settings = cls.get_settings()
         if revision is not None:
@@ -204,7 +203,9 @@ class SourceCollector(object):
         print 'Build: {0}'.format(build)
 
         suffix = None
+        # Generate a suffix for artifact-only builds or develop/experimental builds to distinguish them from release builds
         if release in ['develop', 'experimental'] or artifact_only is True:
+            print 'Generating a suffix'
             suffix = 'dev.{0}.{1}'.format(int(time.time()), revision_hash)
 
         # Save changelog

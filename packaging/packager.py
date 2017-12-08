@@ -31,11 +31,12 @@ if __name__ == '__main__':
     parser.add_option('-r', '--release', dest='release', default=None)
     parser.add_option('-e', '--revision', dest='revision', default=None)
     parser.add_option('-o', '--hotfix-release', dest='hotfix_release', default=None)
-    parser.add_option('-a', '--artifact-only', dest='artifact_only', default=False)
+    parser.add_option('-a', '--artifact-only', dest='artifact_only', action='store_true', default=False)
     parser.add_option('--no-rpm', dest='rpm', action='store_false', default=True)
     parser.add_option('--no-deb', dest='deb', action='store_false', default=True)
     options, args = parser.parse_args()
 
+    print 'Received arguments: {0}'.format(options)
     # 1. Collect sources
     settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
     metadata = SourceCollector.collect(product=options.product,

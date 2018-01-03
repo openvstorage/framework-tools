@@ -269,7 +269,7 @@ class SourceCollector(object):
             print command
         else:
             if debug is True:
-                print command
+                print 'Debug - Running command: {0}'.format(command)
             try:
                 return check_output(command, shell=True, cwd=working_directory)
             except CalledProcessError as cpe:

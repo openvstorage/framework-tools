@@ -43,7 +43,7 @@ if __name__ == '__main__':
                                        release=options.release,
                                        revision=options.revision,
                                        artifact_only=options.artifact_only)
-    print 'Metadata: {0}'.format(metadata)
+    print 'Package metadata: {0}'.format(metadata)
 
     if metadata is not None:
         # 2. Build & Upload packages

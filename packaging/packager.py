@@ -49,10 +49,12 @@ if __name__ == '__main__':
         # 2. Build & Upload packages
         if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
             DebianPackager.package(metadata)
-            if options.artifact_only is False:
-                DebianPackager.upload(metadata, add=True, hotfix_release=options.hotfix_release)
-            # Always store artifacts in jenkins too
-            DebianPackager.prepare_artifact(metadata)
+            try:
+                if options.artifact_only is False:
+                    DebianPackager.upload(metadata, add=True, hotfix_release=options.hotfix_release)
+            finally:
+                # Always store artifacts in jenkins too
+                DebianPackager.prepare_artifact(metadata)
         if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
             RPMPackager.package(metadata)
             if options.artifact_only is False:

@@ -161,14 +161,12 @@ class DebianPackager(object):
                                                    working_directory=debs_path).strip()
                 if pool_package != '':
                     print '    Already present on server, using that package'
-                    cp_command = "ssh {0}@{1} 'cp {2} {3}'".format(user, server, pool_package, destination_path)
-                    SourceCollector.run(command=cp_command, working_directory=debs_path)
+                    place_command = "ssh {0}@{1} 'cp {2} {3}'".format(user, server, pool_package, destination_path)
                 else:
                     print '    Uploading package'
                     source_path = os.path.join(debs_path, deb_package)
-
-                    scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
-                    SourceCollector.run(command=scp_command, working_directory=debs_path)
+                    place_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
+                SourceCollector.run(command=place_command, working_directory=debs_path)
                 if add is True:
                     print '    Adding package to repo'
                     if hotfix_release:

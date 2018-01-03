@@ -261,13 +261,15 @@ class SourceCollector(object):
         SourceCollector.run('git fetch --tags', path)
 
     @staticmethod
-    def run(command, working_directory, print_only=False):
+    def run(command, working_directory, print_only=False, debug=True):
         """
         Runs a comment, returning the output
         """
         if print_only is True:
             print command
         else:
+            if debug is True:
+                print 'Debug - Running command: {0}'.format(command)
             try:
                 return check_output(command, shell=True, cwd=working_directory)
             except CalledProcessError as cpe:

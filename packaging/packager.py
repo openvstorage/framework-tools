@@ -43,14 +43,14 @@ if __name__ == '__main__':
                                        release=options.release,
                                        revision=options.revision,
                                        artifact_only=options.artifact_only)
+    print 'Package metadata: {0}'.format(metadata)
 
     if metadata is not None:
-        add_package = options.release != 'hotfix'
         # 2. Build & Upload packages
         if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
             DebianPackager.package(metadata)
             if options.artifact_only is False:
-                DebianPackager.upload(metadata, add=add_package, hotfix_release=options.hotfix_release)
+                DebianPackager.upload(metadata, add=True, hotfix_release=options.hotfix_release)
             # Always store artifacts in jenkins too
             DebianPackager.prepare_artifact(metadata)
         if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):

@@ -95,7 +95,7 @@ class DebianPackager(object):
         :rtype: NoneType
         """
         product, release, version_string, revision_date, package_name, _ = metadata
-        # Get the current workspace directy
+        # Get the current workspace directory
         debian_folder = cls.get_package_destination(product)
         workspace_folder = os.environ['WORKSPACE']
         artifact_folder = os.path.join(workspace_folder, 'artifacts')
@@ -119,6 +119,9 @@ class DebianPackager(object):
     def upload(cls, metadata, add, hotfix_release=None):
         """
         Uploads a given set of packages
+        :param metadata: Metadata about the package to upload
+        :param add: Should the package be added to the repository
+        :param hotfix_release: Which release to hotfix for (Add should still be True when wanting to add it to the repository)
         """
 
         product, release, version_string, revision_date, package_name, package_tags = metadata
@@ -135,51 +138,46 @@ class DebianPackager(object):
                 continue
             user = destination['user']
             base_path = destination['base_path']
-            upload_path = os.path.join(base_path, release)
             pool_path = os.path.join(base_path, 'debian/pool/main')
 
             print 'Publishing to {0}@{1}'.format(user, server)
+            print 'Determining upload path'
+            if hotfix_release:
+                upload_path = os.path.join(base_path, hotfix_release)
+            else:
+                upload_path = os.path.join(base_path, release)
+            print '    Upload path is: {0}'.format(upload_path)
             debs_path = cls.get_package_destination(product, settings)
             deb_packages = [filename for filename in os.listdir(debs_path) if filename.endswith('.deb')]
+            print 'Creating the upload directory on the server'
             SourceCollector.run(command="ssh {0}@{1} 'mkdir -p {2}'".format(user, server, upload_path),
                                 working_directory=debs_path)
-
             for deb_package in deb_packages:
-                print '  {0}'.format(deb_package)
+                print '   {0}'.format(deb_package)
                 destination_path = os.path.join(upload_path, deb_package)
-
+                print '   Determining if the package is already present'
                 find_pool_package_command = "ssh {0}@{1} 'find {2}/ -name \"{3}\"'".format(user, server, pool_path, deb_package)
                 pool_package = SourceCollector.run(command=find_pool_package_command,
                                                    working_directory=debs_path).strip()
                 if pool_package != '':
                     print '    Already present on server, using that package'
                     cp_command = "ssh {0}@{1} 'cp {2} {3}'".format(user, server, pool_package, destination_path)
-                    SourceCollector.run(command=cp_command,
-                                        working_directory=debs_path)
+                    SourceCollector.run(command=cp_command, working_directory=debs_path)
                 else:
                     print '    Uploading package'
                     source_path = os.path.join(debs_path, deb_package)
 
                     scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
-                    SourceCollector.run(command=scp_command,
-                                        working_directory=debs_path)
-                if add is True:  # No hotfix
+                    SourceCollector.run(command=scp_command, working_directory=debs_path)
+                if add is True:
                     print '    Adding package to repo'
-                    remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, release, destination_path)
-                    SourceCollector.run(command=remote_command,
-                                        working_directory=debs_path)
-                elif hotfix_release:  # Hotfix
-                    print '    Uploading package to hotfix release {0}'.format(hotfix_release)
-                    source_path = os.path.join(debs_path, deb_package)
-                    destination_path = os.path.join(base_path, hotfix_release, deb_package)
-
-                    scp_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
-                    SourceCollector.run(command=scp_command,
-                                        working_directory=debs_path)
-                    print '    Adding package to repo'
-                    remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, hotfix_release, destination_path)
-                    SourceCollector.run(command=remote_command,
-                                        working_directory=debs_path)
+                    if hotfix_release:
+                        include_release = hotfix_release
+                    else:
+                        include_release = release
+                    print '    Release to include: {0}'.format(include_release)
+                    remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, include_release, destination_path)
+                    SourceCollector.run(command=remote_command, working_directory=debs_path)
                 else:
                     print '    NOT adding package to repo'
                     print '    Package can be found at: {0}'.format(destination_path)

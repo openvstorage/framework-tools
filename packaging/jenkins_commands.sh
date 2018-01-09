@@ -10,6 +10,10 @@ if [ "${artifact_only}" == "true" ]
 then
   ARGS="${ARGS} --artifact-only"
 fi
+if [ "${no_packaging}" == "true" ]
+then
+  ARGS="${ARGS} --no-packaging"
+fi
 if [ -n "${revision}" ] ; then
   ARGS="${ARGS} --revision=""${revision}"" --hotfix-release=""${hotfix_release}"
 fi

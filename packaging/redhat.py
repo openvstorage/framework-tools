@@ -30,37 +30,51 @@ class RPMPackager(object):
     Responsible for creating rpm packages from the source archive
     """
 
-    def __init__(self):
+    def __init__(self, source_collector, dry_run=False):
         """
-        Dummy init method, RPMPackager is static
+        Creates an instance of a DebianPacker
+        This instance is tied to a SourceCollector instance which holds all product information
+        :param source_collector: SourceCollector instance
+        :param dry_run: Run the source collector in dry run mode
+        * This will not do any impacting changes (like uploading/tagging)
         """
-        raise NotImplementedError('RPMPackager is a static class')
+        self.source_collector = source_collector
+        self.dry_run = dry_run
 
-    @staticmethod
-    def package(metadata):
+        self.redhat_folder = '{0}/redhat'.format(self.source_collector.path_package)
+
+        # Milestone
+        self.packaged = False
+
+    def package(self):
         """
         Packages a given package.
         """
-        product, release, version_string, revision_date, package_name, package_tags = metadata
+        # Validation
+        product = self.source_collector.product
+        release_repo = self.source_collector.release_repo
+        version_string = self.source_collector.release_repo
+        revision_date = self.source_collector.revision_date
+        package_name = self.source_collector.package_name
+        package_tags = self.source_collector.tags
+        if any(item is None for item in [product, release_repo, version_string, revision_date, package_name, package_tags]):
+            raise RuntimeError('The given source collector has not yet collected all of the required information')
 
-        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
-        working_directory = settings['base_path'].format(product)
-        path_code = SourceCollector.path_code.format(working_directory)
-        path_package = SourceCollector.path_package.format(working_directory)
+        path_code = self.source_collector.path_code
+        path_package = self.source_collector.path_package
 
         # Prepare
-        redhat_folder = '{0}/redhat'.format(path_package)
-        if os.path.exists(redhat_folder):
-            shutil.rmtree(redhat_folder)
-        os.mkdir(redhat_folder)
+        if os.path.exists(self.redhat_folder):
+            shutil.rmtree(self.redhat_folder)
+        os.mkdir(self.redhat_folder)
 
-        # extract tar.gz to redhat_folder
+        # Extract tar.gz to redhat_folder
         shutil.copyfile('{0}/{1}_{2}.tar.gz'.format(path_package, package_name, version_string),
-                        '{0}/{1}_{2}.orig.tar.gz'.format(redhat_folder, package_name, version_string))
+                        '{0}/{1}_{2}.orig.tar.gz'.format(self.redhat_folder, package_name, version_string))
         # /<pp>/debian/<packagename>-1.2.3/...
         SourceCollector.run(command='tar -xzf {0}_{1}.orig.tar.gz'.format(package_name, version_string),
-                            working_directory=redhat_folder)
-        code_source_path = '{0}/{1}-{2}'.format(redhat_folder, package_name, version_string)
+                            working_directory=self.redhat_folder)
+        code_source_path = '{0}/{1}-{2}'.format(self.redhat_folder, package_name, version_string)
 
         # copy packaging
         source_packaging_path = os.path.join(path_code, 'packaging')
@@ -144,21 +158,28 @@ class RPMPackager(object):
             command = """fpm -s dir -t rpm -n {package_name} -v {version} --description "{description}" --maintainer "{maintainer}" --license "{license}" --url {URL} -a {arch} --vendor "Open vStorage" {depends}{before_install}{after_install} --prefix=/ -C {package_root}""".format(**params)
 
             SourceCollector.run(command,
-                                working_directory=redhat_folder)
-            print(os.listdir(redhat_folder))
+                                working_directory=self.redhat_folder)
+            print(os.listdir(self.redhat_folder))
+            self.packaged = True
 
-    @staticmethod
-    def upload(metadata):
+    def upload(self):
         """
         Uploads a given set of packages
         """
-        product, release, version_string, revision_date, package_name, package_tags = metadata
+        # Validation
+        if self.packaged is False:
+            raise RuntimeError('Product has not yet been packaged. Unable to upload it')
 
-        settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
-        working_directory = settings['base_path'].format(product)
-        package_path = SourceCollector.path_package.format(working_directory)
-        redhat_folder = '{0}/redhat'.format(package_path)
+        product = self.source_collector.product
+        release_repo = self.source_collector.release_repo
+        version_string = self.source_collector.release_repo
+        revision_date = self.source_collector.revision_date
+        package_name = self.source_collector.package_name
+        package_tags = self.source_collector.tags
+        if any(item is None for item in [product, release_repo, version_string, revision_date, package_name, package_tags]):
+            raise RuntimeError('The given source collector has not yet collected all of the required information')
 
+        settings = self.source_collector.settings
         package_info = settings['repositories']['packages'].get('redhat', [])
         for destination in package_info:
             server = destination['ip']
@@ -169,19 +190,22 @@ class RPMPackager(object):
             user = destination['user']
             base_path = destination['base_path']
 
-            packages = [p for p in os.listdir(redhat_folder) if p.endswith('.rpm')]
+            packages = [p for p in os.listdir(self.redhat_folder) if p.endswith('.rpm')]
             for package in packages:
-                package_source_path = os.path.join(redhat_folder, package)
+                package_source_path = os.path.join(self.redhat_folder, package)
 
-                command = 'scp {0} {1}@{2}:{3}/pool/{4}'.format(package_source_path, user, server, base_path, release)
+                command = 'scp {0} {1}@{2}:{3}/pool/{4}'.format(package_source_path, user, server, base_path, release_repo)
                 print('Uploading package {0}'.format(package))
-                SourceCollector.run(command,
-                                    working_directory=redhat_folder)
+                SourceCollector.run(command=command,
+                                    working_directory=self.redhat_folder,
+                                    print_only=self.dry_run)
             if len(packages) > 0:
                 # Cleanup existing files
-                command = 'ssh {0}@{1} {2}/cleanup_repo.py {2}/pool/{3}/'.format(user, server, base_path, release)
-                print(SourceCollector.run(command,
-                                          working_directory=redhat_folder))
-                command = 'ssh {0}@{1} createrepo --update {2}/dists/{3}'.format(user, server, base_path, release)
-                SourceCollector.run(command,
-                                    working_directory=redhat_folder)
+                command = 'ssh {0}@{1} {2}/cleanup_repo.py {2}/pool/{3}/'.format(user, server, base_path, release_repo)
+                print(SourceCollector.run(command=command,
+                                          working_directory=self.redhat_folder,
+                                          print_only=self.dry_run))
+                command = 'ssh {0}@{1} createrepo --update {2}/dists/{3}'.format(user, server, base_path, release_repo)
+                SourceCollector.run(command=command,
+                                    working_directory=self.redhat_folder,
+                                    print_only=self.dry_run)

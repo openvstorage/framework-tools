@@ -40,7 +40,7 @@ class SourceCollector(object):
     path_package = '{0}/package'
     path_metadata = '{0}/metadata'
 
-    def __init__(self, product, release=None, revision=None, artifact_only=False):
+    def __init__(self, product, release=None, revision=None, artifact_only=False, dry_run=False):
         """
         Initializes a source collector
         :param product: The product that needs to be packaged
@@ -54,6 +54,8 @@ class SourceCollector(object):
         :param artifact_only: Specifies whether the package should only be built and not uploaded.
         * The package name will contain a commit hash to distinguish different builds
         * No tagging will occur
+        :param dry_run: Run the source collector in dry run mode
+        * This will not do any impacting changes (like uploading/tagging)
         """
         print 'Validating input parameters'
         settings = self.get_settings()
@@ -70,6 +72,7 @@ class SourceCollector(object):
         self.release_repo = None  # Release repo to upload the package to
         self.revision = revision
         self.artifact_only = artifact_only
+        self.dry_run = dry_run
 
         self.settings = settings
         self.repository = self.settings['repositories']['code'][product]
@@ -86,7 +89,7 @@ class SourceCollector(object):
         self.code_settings = None  # settings.json fetched from the repository
         self.version = None  # Version of the package the build (found in settings.jon on the repository)
         self.package_name = None  # Name of the package to build (found in settings.jon on the repository)
-        self.tags = None  # Tags for the package to build (found in settings.json on the repository)
+        self.package_tags = None  # Tags for the package to build (found in settings.json on the repository)
         self.revision_hash = None  # Revision hash of the repository
         self.revision_date = None  # Revision data of the repository
         self.tag_data = None  # Tag data of the repository
@@ -135,7 +138,7 @@ class SourceCollector(object):
         self._build_archive()
         # Get the repository to push too
         self._get_release_repo()
-        return self.product, self.release_repo, self.version_string, self.revision_date, self.code_settings['package_name'], self.code_settings.get('tags', [])
+        return self.product, self.release_repo, self.version_string, self.revision_date, self.package_name, self.package_tags
 
     def _create_destination_directories(self):
         """
@@ -182,13 +185,13 @@ class SourceCollector(object):
 
         print 'Building archive'
         SourceCollector.run(command="tar -czf {0}/{1}_{2}.tar.gz {3}".format(self.path_package,
-                                                                             self.code_settings['package_name'],
+                                                                             self.package_name,
                                                                              self.version_string,
-                                                                             self.code_settings['source_contents'].format(self.code_settings['package_name'], self.version_string)),
+                                                                             self.code_settings['source_contents'].format(self.package_name, self.version_string)),
                             working_directory=self.path_code)
         SourceCollector.run(command='rm -f CHANGELOG.txt',
                             working_directory=self.path_code)
-        print 'Archive: {0}/{1}_{2}.tar.gz'.format(self.path_package, self.code_settings['package_name'], self.version_string)
+        print 'Archive: {0}/{1}_{2}.tar.gz'.format(self.path_package, self.package_name, self.version_string)
         print 'Done'
 
     def _collect_sources(self):
@@ -227,6 +230,8 @@ class SourceCollector(object):
         # Build version
         self.code_settings = SourceCollector.json_loads('{0}/packaging/settings.json'.format(self.path_code))
         self.version = '{0}.{1}'.format(self.code_settings['version']['major'], self.code_settings['version']['minor'])
+        self.package_name = self.code_settings['package_name']
+        self.package_tags = self.code_settings.get('tags', [])
         print 'Version: {0}'.format(self.version)
 
         # Load tag information
@@ -265,8 +270,10 @@ class SourceCollector(object):
         if self.release in ['master', 'hotfix'] and self.increment_build is True and self.artifact_only is False:
             print 'Tagging revision'
             SourceCollector.run(command='git tag -a {0} {1} -m "Added tag {0} for changeset {1}"'.format(self.version_string, self.revision_hash),
+                                print_only=self.dry_run,
                                 working_directory=self.path_metadata)
             SourceCollector.run(command='git push origin --tags',
+                                print_only=self.dry_run,
                                 working_directory=self.path_metadata)
 
     def _build_changelog(self):

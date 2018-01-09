@@ -29,105 +29,110 @@ class DebianPackager(object):
     Responsible for creating debian packages from the source archive
     """
 
-    def __init__(self):
+    def __init__(self, source_collector, dry_run=False):
         """
-        Dummy init method, DebianPackager is static
+        Creates an instance of a DebianPacker
+        This instance is tied to a SourceCollector instance which holds all product information
+        :param source_collector: SourceCollector instance
+        :param dry_run: Run the source collector in dry run mode
+        * This will not do any impacting changes (like uploading/tagging)
         """
-        raise NotImplementedError('DebianPackager is a static class')
+        self.source_collector = source_collector
+        self.dry_run = dry_run
 
-    @classmethod
-    def package(cls, metadata):
-        """
-        Packages a given package.
-        """
+        # Milestone
+        self.packaged = False
+        self.debian_folder = os.path.join(self.source_collector.path_package, 'debian')
 
-        product, release, version_string, revision_date, package_name, _ = metadata
+    def package(self):
+        """
+        Packages the related product.
+        """
+        # Validation
+        product = self.source_collector.product
+        release_repo = self.source_collector.release_repo
+        version_string = self.source_collector.release_repo
+        revision_date = self.source_collector.revision_date
+        package_name = self.source_collector.package_name
+        if any(item is None for item in [product, release_repo, version_string, revision_date, package_name]):
+            raise RuntimeError('The given source collector has not yet collected all of the required information')
 
-        settings = SourceCollector.get_settings()
-        _, path_code, path_package, _ = SourceCollector.get_paths(product, settings)
+        path_code = self.source_collector.path_code
+        path_package = self.source_collector.path_package
 
         # Prepare
         # /<pp>/debian
-        debian_folder = cls.get_package_destination(product, settings)
-        if os.path.exists(debian_folder):
-            shutil.rmtree(debian_folder)
+        if os.path.exists(self.debian_folder):
+            shutil.rmtree(self.debian_folder)
         # /<rp>/packaging/debian -> /<pp>/debian
-        shutil.copytree('{0}/packaging/debian'.format(path_code), debian_folder)
+        shutil.copytree('{0}/packaging/debian'.format(path_code), self.debian_folder)
 
         # Rename tgz
         # /<pp>/<package name>_1.2.3.tar.gz -> /<pp>/debian/<package name>_1.2.3.orig.tar.gz
         shutil.copyfile('{0}/{1}_{2}.tar.gz'.format(path_package, package_name, version_string),
-                        '{0}/{1}_{2}.orig.tar.gz'.format(debian_folder, package_name, version_string))
+                        '{0}/{1}_{2}.orig.tar.gz'.format(self.debian_folder, package_name, version_string))
         # /<pp>/debian/<package name>-1.2.3/...
         SourceCollector.run(command='tar -xzf {0}_{1}.orig.tar.gz'.format(package_name, version_string),
-                            working_directory=debian_folder)
+                            working_directory=self.debian_folder)
 
         # Move the debian package metadata into the extracted source
         # /<pp>/debian/debian -> /<pp>/debian/<package name>-1.2.3/
-        SourceCollector.run(command='mv {0}/debian {0}/{1}-{2}/'.format(debian_folder, package_name, version_string),
+        SourceCollector.run(command='mv {0}/debian {0}/{1}-{2}/'.format(self.debian_folder, package_name, version_string),
                             working_directory=path_package)
 
         # Build changelog entry
-        with open('{0}/{1}-{2}/debian/changelog'.format(debian_folder, package_name, version_string), 'w') as changelog_file:
+        with open('{0}/{1}-{2}/debian/changelog'.format(self.debian_folder, package_name, version_string), 'w') as changelog_file:
             changelog_file.write("""{0} ({1}-1) {2}; urgency=low
 
   * For changes, see individual changelogs
 
  -- Packaging System <engineering@openvstorage.com>  {3}
-""".format(package_name, version_string, release, revision_date.strftime('%a, %d %b %Y %H:%M:%S +0000')))
+""".format(package_name, version_string, release_repo, revision_date.strftime('%a, %d %b %Y %H:%M:%S +0000')))
 
         # Some more tweaks
-        SourceCollector.run(command='chmod 770 {0}/{1}-{2}/debian/rules'.format(debian_folder, package_name, version_string),
+        SourceCollector.run(command='chmod 770 {0}/{1}-{2}/debian/rules'.format(self.debian_folder, package_name, version_string),
                             working_directory=path_package)
         SourceCollector.run(command="sed -i -e 's/__NEW_VERSION__/{0}/' *.*".format(version_string),
-                            working_directory='{0}/{1}-{2}/debian'.format(debian_folder, package_name, version_string))
+                            working_directory='{0}/{1}-{2}/debian'.format(self.debian_folder, package_name, version_string))
 
         # Build the package
         SourceCollector.run(command='dpkg-buildpackage',
-                            working_directory='{0}/{1}-{2}'.format(debian_folder, package_name, version_string))
+                            working_directory='{0}/{1}-{2}'.format(self.debian_folder, package_name, version_string))
+        self.packaged = True
 
-    @classmethod
-    def prepare_artifact(cls, metadata):
+    def prepare_artifact(self):
         """
         Prepares the current package to be stored as an artifact on Jenkins
-        :param metadata: Metadata about the product
         :return: None
         :rtype: NoneType
         """
-        product, release, version_string, revision_date, package_name, _ = metadata
         # Get the current workspace directory
-        debian_folder = cls.get_package_destination(product)
         workspace_folder = os.environ['WORKSPACE']
         artifact_folder = os.path.join(workspace_folder, 'artifacts')
         # Clear older artifacts
         if os.path.exists(artifact_folder):
             shutil.rmtree(artifact_folder)
-        shutil.copytree(debian_folder, artifact_folder)
+        shutil.copytree(self.debian_folder, artifact_folder)
 
-    @classmethod
-    def get_package_destination(cls, product, settings=None):
-        """
-        Return the directory where the packages will be placed
-        :param product: The product to build
-        :param settings: Settings to use, defaults to the provided settings in the settings.json
-        :return: The path to the directory of the packages
-        """
-        _, _, path_package, _ = SourceCollector.get_paths(product, settings)
-        return os.path.join(path_package, 'debian')
-
-    @classmethod
-    def upload(cls, metadata, add, hotfix_release=None):
+    def upload(self, add, hotfix_release=None):
         """
         Uploads a given set of packages
-        :param metadata: Metadata about the package to upload
         :param add: Should the package be added to the repository
         :param hotfix_release: Which release to hotfix for (Add should still be True when wanting to add it to the repository)
         """
+        if self.packaged is False:
+            raise RuntimeError('Product has not yet been packaged. Unable to upload it')
+        # Validation
+        product = self.source_collector.product
+        release_repo = self.source_collector.release_repo
+        version_string = self.source_collector.release_repo
+        revision_date = self.source_collector.revision_date
+        package_name = self.source_collector.package_name
+        package_tags = self.source_collector.tags
+        if any(item is None for item in [product, release_repo, version_string, revision_date, package_name, package_tags]):
+            raise RuntimeError('The given source collector has not yet collected all of the required information')
 
-        product, release, version_string, revision_date, package_name, package_tags = metadata
-
-        settings = SourceCollector.get_settings()
-        _, _, path_package, _ = SourceCollector.get_paths(product, settings)
+        settings = self.source_collector.settings
 
         package_info = settings['repositories']['packages'].get('debian', [])
         for destination in package_info:
@@ -145,37 +150,36 @@ class DebianPackager(object):
             if hotfix_release:
                 upload_path = os.path.join(base_path, hotfix_release)
             else:
-                upload_path = os.path.join(base_path, release)
+                upload_path = os.path.join(base_path, release_repo)
             print '    Upload path is: {0}'.format(upload_path)
-            debs_path = cls.get_package_destination(product, settings)
-            deb_packages = [filename for filename in os.listdir(debs_path) if filename.endswith('.deb')]
+            deb_packages = [filename for filename in os.listdir(self.debian_folder) if filename.endswith('.deb')]
             print 'Creating the upload directory on the server'
             SourceCollector.run(command="ssh {0}@{1} 'mkdir -p {2}'".format(user, server, upload_path),
-                                working_directory=debs_path)
+                                working_directory=self.debian_folder)
             for deb_package in deb_packages:
                 print '   {0}'.format(deb_package)
                 destination_path = os.path.join(upload_path, deb_package)
                 print '   Determining if the package is already present'
                 find_pool_package_command = "ssh {0}@{1} 'find {2}/ -name \"{3}\"'".format(user, server, pool_path, deb_package)
                 pool_package = SourceCollector.run(command=find_pool_package_command,
-                                                   working_directory=debs_path).strip()
+                                                   working_directory=self.debian_folder).strip()
                 if pool_package != '':
                     print '    Already present on server, using that package'
                     place_command = "ssh {0}@{1} 'cp {2} {3}'".format(user, server, pool_package, destination_path)
                 else:
                     print '    Uploading package'
-                    source_path = os.path.join(debs_path, deb_package)
+                    source_path = os.path.join(self.debian_folder, deb_package)
                     place_command = "scp {0} {1}@{2}:{3}".format(source_path, user, server, destination_path)
-                SourceCollector.run(command=place_command, working_directory=debs_path)
+                SourceCollector.run(command=place_command, print_only=self.dry_run, working_directory=self.debian_folder)
                 if add is True:
                     print '    Adding package to repo'
                     if hotfix_release:
                         include_release = hotfix_release
                     else:
-                        include_release = release
+                        include_release = release_repo
                     print '    Release to include: {0}'.format(include_release)
                     remote_command = "ssh {0}@{1} 'reprepro -Vb {2}/debian includedeb {3} {4}'".format(user, server, base_path, include_release, destination_path)
-                    SourceCollector.run(command=remote_command, working_directory=debs_path)
+                    SourceCollector.run(command=remote_command, print_only=self.dry_run, working_directory=self.debian_folder)
                 else:
                     print '    NOT adding package to repo'
                     print '    Package can be found at: {0}'.format(destination_path)

@@ -53,6 +53,7 @@ class SourceCollector(object):
         * If the revision parameter is specified, the only valid releases are 'experimental' and 'hotfix'.
         :param artifact_only: Specifies whether the package should only be built and not uploaded.
         * The package name will contain a commit hash to distinguish different builds
+        * No tagging will occur
         """
         print 'Validating input parameters'
         settings = self.get_settings()

@@ -18,7 +18,6 @@
 Packager module
 """
 
-import os
 from optparse import OptionParser
 from sourcecollector import SourceCollector
 from debian import DebianPackager
@@ -32,29 +31,31 @@ if __name__ == '__main__':
     parser.add_option('-e', '--revision', dest='revision', default=None)
     parser.add_option('-o', '--hotfix-release', dest='hotfix_release', default=None)
     parser.add_option('-a', '--artifact-only', dest='artifact_only', action='store_true', default=False)
-    parser.add_option('-n', '--no-packaging', dest='no_packaging', action='store_true', default=False)
+    parser.add_option('-u', '--no-upload', dest='no_upload', action='store_true', default=True)
     parser.add_option('--no-rpm', dest='rpm', action='store_false', default=True)
     parser.add_option('--no-deb', dest='deb', action='store_false', default=True)
     options, args = parser.parse_args()
 
     print 'Received arguments: {0}'.format(options)
     # 1. Collect sources
-    settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
     source_collector = SourceCollector(product=options.product,
                                        release=options.release,
                                        revision=options.revision,
                                        artifact_only=options.artifact_only)
+    # Setting it to artifact only also means no uploading
+    if options.artifact_only is True:
+        options.no_upload = True
     settings = source_collector.settings
     metadata = source_collector.collect()
     print 'Package metadata: {0}'.format(metadata)
 
-    if metadata is not None and options.no_packaging is False:
+    if metadata is not None:
         add_package = options.release != 'hotfix'
         # 2. Build & Upload packages
         if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
             DebianPackager.package(metadata)
             try:
-                if options.artifact_only is False:
+                if options.no_upload is False:
                     DebianPackager.upload(metadata, add=add_package, hotfix_release=options.hotfix_release)
             finally:
                 # Always store artifacts in jenkins too

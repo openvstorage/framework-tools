@@ -51,7 +51,7 @@ class DebianPackager(object):
         # Validation
         product = self.source_collector.product
         release_repo = self.source_collector.release_repo
-        version_string = self.source_collector.release_repo
+        version_string = self.source_collector.version_string
         revision_date = self.source_collector.revision_date
         package_name = self.source_collector.package_name
         if any(item is None for item in [product, release_repo, version_string, revision_date, package_name]):
@@ -125,7 +125,7 @@ class DebianPackager(object):
         # Validation
         product = self.source_collector.product
         release_repo = self.source_collector.release_repo
-        version_string = self.source_collector.release_repo
+        version_string = self.source_collector.version_string
         revision_date = self.source_collector.revision_date
         package_name = self.source_collector.package_name
         package_tags = self.source_collector.tags

@@ -53,7 +53,7 @@ class RPMPackager(object):
         # Validation
         product = self.source_collector.product
         release_repo = self.source_collector.release_repo
-        version_string = self.source_collector.release_repo
+        version_string = self.source_collector.version_string
         revision_date = self.source_collector.revision_date
         package_name = self.source_collector.package_name
         package_tags = self.source_collector.tags
@@ -172,7 +172,7 @@ class RPMPackager(object):
 
         product = self.source_collector.product
         release_repo = self.source_collector.release_repo
-        version_string = self.source_collector.release_repo
+        version_string = self.source_collector.version_string
         revision_date = self.source_collector.revision_date
         package_name = self.source_collector.package_name
         package_tags = self.source_collector.tags

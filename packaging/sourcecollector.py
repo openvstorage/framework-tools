@@ -391,17 +391,16 @@ class SourceCollector(object):
         """
         Runs a comment, returning the output
         """
+        if debug is True:
+            print 'Debug - Running command: {0} on path {1}'.format(command, working_directory)
         if print_only is True:
-            print command
-        else:
-            if debug is True:
-                print 'Debug - Running command: {0}'.format(command)
-            try:
-                return check_output(command, shell=True, cwd=working_directory)
-            except CalledProcessError as cpe:
-                # CalledProcessError doesn't include the output in its __str__
-                #  making debug harder
-                raise RuntimeError('{0}. \n Output: \n {1} \n'.format(cpe, cpe.output))
+            return
+        try:
+            return check_output(command, shell=True, cwd=working_directory)
+        except CalledProcessError as cpe:
+            # CalledProcessError doesn't include the output in its __str__
+            #  making debug harder
+            raise RuntimeError('{0}. \n Output: \n {1} \n'.format(cpe, cpe.output))
 
     @staticmethod
     def json_loads(path):

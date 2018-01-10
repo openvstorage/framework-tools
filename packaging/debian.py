@@ -128,7 +128,7 @@ class DebianPackager(object):
         version_string = self.source_collector.version_string
         revision_date = self.source_collector.revision_date
         package_name = self.source_collector.package_name
-        package_tags = self.source_collector.tags
+        package_tags = self.source_collector.package_tags
         if any(item is None for item in [product, release_repo, version_string, revision_date, package_name, package_tags]):
             raise RuntimeError('The given source collector has not yet collected all of the required information')
 

@@ -64,7 +64,6 @@ if __name__ == '__main__':
             finally:
                 # Always store artifacts in jenkins too
                 debian_packager.prepare_artifact()
-                DebianPackager.prepare_artifact(metadata)
         if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
             rpm_packager = RPMPackager(source_collector=source_collector,
                                        dry_run=options.dry_run)

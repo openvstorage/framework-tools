@@ -367,9 +367,9 @@ class SourceCollector(object):
         # Generate a suffix for artifact-only builds or develop/experimental builds to distinguish them from release builds
         if self.release in ['develop', 'experimental'] or (self.artifact_only is True and self.release != 'hotfix'):
             print 'Generating a suffix'
-            suffix = 'dev.{0}.{1}'.format(int(time.time()), self.revision_hash)
+            suffix = '-dev.{0}.{1}'.format(int(time.time()), self.revision_hash)
 
-        self.version_string = '{0}.{1}{2}'.format(self.version, build, '-{0}'.format(suffix))
+        self.version_string = '{0}.{1}{2}'.format(self.version, build, '{0}'.format(suffix))
         print 'Full version: {0}'.format(self.version_string)
 
         return self.version_string

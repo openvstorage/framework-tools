@@ -391,8 +391,8 @@ class SourceCollector(object):
         """
         Runs a comment, returning the output
         """
-        if debug is True:
-            print 'Debug - Running command: {0} on path {1}'.format(command, working_directory)
+        if debug is True or print_only is True:
+            print 'Debug - {0} command: {1} on path {2}'.format('Running' if print_only is False else 'Would be running', command, working_directory)
         if print_only is True:
             return
         try:

@@ -8,6 +8,7 @@
     ],
     "repositories": {
         "code": {
+            "dev_ops": "git@github.com:openvstorage/dev_ops.git",
             "hprm-manager": "git@github.com:openvstorage/hprm-manager.git",
             "iscsi-manager": "git@github.com:openvstorage/iscsi-manager.git",
             "openvstorage": "git@github.com:openvstorage/framework.git",

@@ -31,7 +31,7 @@ if __name__ == '__main__':
     parser.add_option('-e', '--revision', dest='revision', default=None)
     parser.add_option('-o', '--hotfix-release', dest='hotfix_release', default=None)
     parser.add_option('-a', '--artifact-only', dest='artifact_only', action='store_true', default=False)
-    parser.add_option('-u', '--no-upload', dest='no_upload', action='store_true', default=True)
+    parser.add_option('-u', '--no-upload', dest='no_upload', action='store_true', default=False)
     parser.add_option('-d', '--dry-run', dest='dry_run', action='store_true', default=False)
     parser.add_option('--no-rpm', dest='rpm', action='store_false', default=True)
     parser.add_option('--no-deb', dest='deb', action='store_false', default=True)

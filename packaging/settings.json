@@ -28,12 +28,6 @@
         "packages": {
             "debian": [
                 {
-                    "ip": "172.20.3.29",
-                    "user": "upload",
-                    "base_path": "/usr/share/repo",
-                    "tags": ["community"]
-                },
-                {
                     "ip": "172.20.3.81",
                     "user": "upload",
                     "base_path": "/usr/share/repo",

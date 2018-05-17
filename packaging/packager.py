@@ -20,8 +20,9 @@ Packager module
 
 from optparse import OptionParser
 from sourcecollector import SourceCollector
-from debian import DebianPackager
-from redhat import RPMPackager
+from .packagers.debian import DebianPackager
+from .packagers.redhat import RPMPackager
+from .packagers.pip import PIPDebianPackager
 
 
 if __name__ == '__main__':
@@ -35,6 +36,7 @@ if __name__ == '__main__':
     parser.add_option('-d', '--dry-run', dest='dry_run', action='store_true', default=False)
     parser.add_option('--no-rpm', dest='rpm', action='store_false', default=True)
     parser.add_option('--no-deb', dest='deb', action='store_false', default=True)
+    parser.add_option('--pip', dest='is_pip', action='store_true', default=False)
     options, args = parser.parse_args()
 
     print 'Received arguments: {0}'.format(options)
@@ -43,7 +45,8 @@ if __name__ == '__main__':
                                        release=options.release,
                                        revision=options.revision,
                                        artifact_only=options.artifact_only,
-                                       dry_run=options.dry_run)
+                                       dry_run=options.dry_run,
+                                       is_pip=options.pip)
     # Setting it to artifact only also means no uploading
     if options.artifact_only is True:
         options.no_upload = True
@@ -54,19 +57,19 @@ if __name__ == '__main__':
     if metadata is not None:
         add_package = options.release != 'hotfix'
         # 2. Build & Upload packages
-        if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
-            debian_packager = DebianPackager(source_collector=source_collector,
-                                             dry_run=options.dry_run)
-            debian_packager.package()
-            try:
-                if options.no_upload is False:
-                    debian_packager.upload(add=add_package, hotfix_release=options.hotfix_release)
-            finally:
-                # Always store artifacts in jenkins too
-                debian_packager.prepare_artifact()
-        if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
-            rpm_packager = RPMPackager(source_collector=source_collector,
-                                       dry_run=options.dry_run)
-            rpm_packager.package()
+        packagers = []
+        if any(option is True for option in [options.deb, options.rpm]):
+            if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
+                packagers.append(DebianPackager(source_collector=source_collector, dry_run=options.dry_run))
+            if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
+                packagers.append(RPMPackager(source_collector=source_collector, dry_run=options.dry_run))
+        elif options.pip is True and options.product in settings['pip']['modules']:
+            packagers.append(PIPDebianPackager(source_collector=source_collector, dry_run=options.dry_run))
+        for packager in packagers:
+            packager.package()
             if options.no_upload is False:
-                rpm_packager.upload()  # add not relevant for RPM
+                try:
+                    packager.upload(add=add_package, hotfix_release=options.hotfix_release)
+                finally:
+                    # Always store artifacts in jenkins too
+                    packager.prepare_artifact()

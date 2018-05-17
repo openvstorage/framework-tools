@@ -18,6 +18,10 @@ if [ "${dry_run}" == "true" ]
 then
   ARGS="${ARGS} --dry-run"
 fi
+if [ "${pip}" == "true" ]
+then
+  ARGS="${ARGS} --dry-run"
+fi
 if [ -n "${revision}" ] ; then
   ARGS="${ARGS} --revision=""${revision}"" --hotfix-release=""${hotfix_release}"
 fi

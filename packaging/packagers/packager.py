@@ -17,8 +17,8 @@
 """
 Packager module
 """
-
 import os
+import stat
 import shutil
 from packaging.sourcecollector import SourceCollector
 
@@ -59,6 +59,36 @@ class Packager(object):
         """
         raise NotImplementedError('Packaging logic has to be implemented. It must set self.packaged to True when finished')
 
+    @classmethod
+    def copytree(cls, src, dst, symlinks=False, ignore=None):
+        """
+        Work around the fact that shututil.copytree will raise when a directory already exists...
+        """
+        if not os.path.exists(dst):
+            os.makedirs(dst)
+            shutil.copystat(src, dst)
+        lst = os.listdir(src)
+        if ignore:
+            excl = ignore(src, lst)
+            lst = [x for x in lst if x not in excl]
+        for item in lst:
+            s = os.path.join(src, item)
+            d = os.path.join(dst, item)
+            if symlinks and os.path.islink(s):
+                if os.path.lexists(d):
+                    os.remove(d)
+                os.symlink(os.readlink(s), d)
+                try:
+                    st = os.lstat(s)
+                    mode = stat.S_IMODE(st.st_mode)
+                    os.lchmod(d, mode)
+                except:
+                    pass  # lchmod not available
+            elif os.path.isdir(s):
+                cls.copytree(s, d, symlinks, ignore)
+            else:
+                shutil.copy2(s, d)
+
     def prepare_artifact(self):
         """
         Prepares the current package to be stored as an artifact on Jenkins
@@ -70,7 +100,7 @@ class Packager(object):
         # Get the current workspace directory
         workspace_folder = os.environ['WORKSPACE']
         artifact_folder = os.path.join(workspace_folder, 'artifacts')
-        shutil.copytree(self.package_folder, artifact_folder, ignore=files_to_ignore)
+        self.copytree(self.package_folder, artifact_folder, ignore=files_to_ignore)
 
     @staticmethod
     def clean_artifact_folder():

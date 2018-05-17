@@ -20,9 +20,9 @@ Packager module
 
 from optparse import OptionParser
 from sourcecollector import SourceCollector
-from .packagers.debian import DebianPackager
-from .packagers.redhat import RPMPackager
-from .packagers.pip import PIPDebianPackager
+from packaging.packagers.debian import DebianPackager
+from packaging.packagers.redhat import RPMPackager
+from packaging.packagers.pip import PIPDebianPackager
 
 
 if __name__ == '__main__':

@@ -19,7 +19,7 @@ Debian packager module
 """
 import os
 import shutil
-from .packager import Packager
+from packaging.packagers.packager import Packager
 from packaging.sourcecollector import SourceCollector
 
 

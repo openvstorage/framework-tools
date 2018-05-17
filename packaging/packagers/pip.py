@@ -17,8 +17,8 @@
 """
 Pip packager module
 """
-from .debian import DebianPackager
-from ..sourcecollector import SourceCollector
+from packaging.packagers.debian import DebianPackager
+from packaging.sourcecollector import SourceCollector
 
 
 class PIPDebianPackager(DebianPackager):

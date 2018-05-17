@@ -20,7 +20,7 @@ Packager module
 
 import os
 import shutil
-from ..sourcecollector import SourceCollector
+from packaging.sourcecollector import SourceCollector
 
 
 class Packager(object):

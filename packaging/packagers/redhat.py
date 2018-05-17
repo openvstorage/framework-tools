@@ -20,9 +20,8 @@ RPM packager module
 import os
 import shutil
 from ConfigParser import RawConfigParser
+from packaging.packagers.packager import Packager
 from packaging.sourcecollector import SourceCollector
-
-from .packager import Packager
 
 
 class RPMPackager(Packager):

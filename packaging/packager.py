@@ -65,7 +65,10 @@ if __name__ == '__main__':
                 packagers.append(RPMPackager(source_collector=source_collector, dry_run=options.dry_run))
         elif options.pip is True and options.product in settings['pip']['modules']:
             packagers.append(PIPDebianPackager(source_collector=source_collector, dry_run=options.dry_run))
-        for packager in packagers:
+        for index, packager in enumerate(packagers):
+            if index == 0:
+                # Clean artifacts from an older folder
+                packager.clean_artifact_folder()
             packager.package()
             if options.no_upload is False:
                 try:

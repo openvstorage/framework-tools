@@ -65,13 +65,23 @@ class Packager(object):
         :return: None
         :rtype: NoneType
         """
+        def files_to_ignore(dir, filenames):
+            return [filename for filename in filenames if not filename.endswith(self.package_suffix)]
         # Get the current workspace directory
+        workspace_folder = os.environ['WORKSPACE']
+        artifact_folder = os.path.join(workspace_folder, 'artifacts')
+        shutil.copytree(self.package_folder, artifact_folder, ignore=files_to_ignore)
+
+    @staticmethod
+    def clean_artifact_folder():
+        """
+        Cleans the artifact folder from the previous run
+        """
         workspace_folder = os.environ['WORKSPACE']
         artifact_folder = os.path.join(workspace_folder, 'artifacts')
         # Clear older artifacts
         if os.path.exists(artifact_folder):
             shutil.rmtree(artifact_folder)
-        shutil.copytree(self.package_folder, artifact_folder)
 
     def upload(self, add, hotfix_release=None):
         """

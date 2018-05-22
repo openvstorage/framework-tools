@@ -25,7 +25,7 @@ fi
 if [ -n "${revision}" ] ; then
   ARGS="${ARGS} --revision=""${revision}"" --hotfix-release=""${hotfix_release}"
 fi
-# Add -m option to set the module to packaging so it can resolve imports
-python -m packaging.packager packaging/packager.py ${ARGS}
+
+bash scripts/docker/install_docker.sh ${ARGS}
 
 echo "Packaging complete"

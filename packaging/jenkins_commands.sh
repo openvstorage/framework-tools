@@ -20,7 +20,7 @@ then
 fi
 if [ "${pip}" == "true" ]
 then
-  ARGS="${ARGS} --dry-run"
+  ARGS="${ARGS} --pip"
 fi
 if [ -n "${revision}" ] ; then
   ARGS="${ARGS} --revision=""${revision}"" --hotfix-release=""${hotfix_release}"

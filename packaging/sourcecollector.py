@@ -77,7 +77,7 @@ class SourceCollector(object):
         self.is_pip = is_pip
 
         self.settings = settings
-        self.repository = self.settings['repositories']['code'][product] if self.is_pip else None
+        self.repository = self.settings['repositories']['code'][product] if not self.is_pip else None
         # Set some pathing information
         self.working_directory = self.settings['base_path'].format(self.product)
         self.path_code = self.path_code.format(self.working_directory)

@@ -58,13 +58,13 @@ if __name__ == '__main__':
         add_package = options.release != 'hotfix'
         # 2. Build & Upload packages
         packagers = []
-        if any(option is True for option in [options.deb, options.rpm]):
+        if options.is_pip is True and options.product in settings['pip']['modules']:
+            packagers.append(PIPDebianPackager(source_collector=source_collector, dry_run=options.dry_run))
+        elif any(option is True for option in [options.deb, options.rpm]):
             if options.deb is True and 'deb' not in settings['repositories']['exclude_builds'].get(options.product, []):
                 packagers.append(DebianPackager(source_collector=source_collector, dry_run=options.dry_run))
             if options.rpm is True and 'rpm' not in settings['repositories']['exclude_builds'].get(options.product, []):
                 packagers.append(RPMPackager(source_collector=source_collector, dry_run=options.dry_run))
-        elif options.pip is True and options.product in settings['pip']['modules']:
-            packagers.append(PIPDebianPackager(source_collector=source_collector, dry_run=options.dry_run))
         for index, packager in enumerate(packagers):
             if index == 0:
                 # Clean artifacts from an older folder

@@ -26,6 +26,6 @@ if [ -n "${revision}" ] ; then
   ARGS="${ARGS} --revision=""${revision}"" --hotfix-release=""${hotfix_release}"
 fi
 
-bash scripts/docker/install_docker.sh ${ARGS}
+bash packaging/docker/install_docker.sh ${ARGS}
 
 echo "Packaging complete"

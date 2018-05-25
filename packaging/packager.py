@@ -70,9 +70,9 @@ if __name__ == '__main__':
                 # Clean artifacts from an older folder
                 packager.clean_artifact_folder()
             packager.package()
-            if options.no_upload is False:
-                try:
+            try:
+                if options.no_upload is False:
                     packager.upload(add=add_package, hotfix_release=options.hotfix_release)
-                finally:
-                    # Always store artifacts in jenkins too
-                    packager.prepare_artifact()
+            finally:
+                # Always store artifacts in jenkins too
+                packager.prepare_artifact()

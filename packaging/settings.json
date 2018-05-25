@@ -35,9 +35,11 @@
                     "tags": ["community", "enterprise"]
                 }
             ],
-            "redhat": [
-            ]
+            "redhat": []
         }
+    },
+    "pip": {
+        "modules": ["typing", "rtslib", "boto"]
     },
     "branch_map": {
         "develop": "fwk-develop",

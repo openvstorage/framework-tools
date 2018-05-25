@@ -18,10 +18,14 @@ if [ "${dry_run}" == "true" ]
 then
   ARGS="${ARGS} --dry-run"
 fi
+if [ "${pip}" == "true" ]
+then
+  ARGS="${ARGS} --pip"
+fi
 if [ -n "${revision}" ] ; then
   ARGS="${ARGS} --revision=""${revision}"" --hotfix-release=""${hotfix_release}"
 fi
-
-python packaging/packager.py ${ARGS}
+# Add -m option to set the module to packaging so it can resolve imports
+python -m packaging.packager packaging/packager.py ${ARGS}
 
 echo "Packaging complete"

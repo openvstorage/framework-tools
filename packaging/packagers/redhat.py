@@ -20,10 +20,11 @@ RPM packager module
 import os
 import shutil
 from ConfigParser import RawConfigParser
-from sourcecollector import SourceCollector
+from packaging.packagers.packager import Packager
+from packaging.sourcecollector import SourceCollector
 
 
-class RPMPackager(object):
+class RPMPackager(Packager):
     """
     RPMPackager class
 
@@ -38,13 +39,7 @@ class RPMPackager(object):
         :param dry_run: Run the source collector in dry run mode
         * This will not do any impacting changes (like uploading/tagging)
         """
-        self.source_collector = source_collector
-        self.dry_run = dry_run
-
-        self.redhat_folder = '{0}/redhat'.format(self.source_collector.path_package)
-
-        # Milestone
-        self.packaged = False
+        super(RPMPackager, self).__init__(source_collector, dry_run, distro='redhat', package_suffix='.rpm')
 
     def package(self):
         """
@@ -64,17 +59,17 @@ class RPMPackager(object):
         path_package = self.source_collector.path_package
 
         # Prepare
-        if os.path.exists(self.redhat_folder):
-            shutil.rmtree(self.redhat_folder)
-        os.mkdir(self.redhat_folder)
+        if os.path.exists(self.package_folder):
+            shutil.rmtree(self.package_folder)
+        os.mkdir(self.package_folder)
 
         # Extract tar.gz to redhat_folder
         shutil.copyfile('{0}/{1}_{2}.tar.gz'.format(path_package, package_name, version_string),
-                        '{0}/{1}_{2}.orig.tar.gz'.format(self.redhat_folder, package_name, version_string))
+                        '{0}/{1}_{2}.orig.tar.gz'.format(self.package_folder, package_name, version_string))
         # /<pp>/debian/<packagename>-1.2.3/...
         SourceCollector.run(command='tar -xzf {0}_{1}.orig.tar.gz'.format(package_name, version_string),
-                            working_directory=self.redhat_folder)
-        code_source_path = '{0}/{1}-{2}'.format(self.redhat_folder, package_name, version_string)
+                            working_directory=self.package_folder)
+        code_source_path = '{0}/{1}-{2}'.format(self.package_folder, package_name, version_string)
 
         # copy packaging
         source_packaging_path = os.path.join(path_code, 'packaging')
@@ -158,14 +153,16 @@ class RPMPackager(object):
             command = """fpm -s dir -t rpm -n {package_name} -v {version} --description "{description}" --maintainer "{maintainer}" --license "{license}" --url {URL} -a {arch} --vendor "Open vStorage" {depends}{before_install}{after_install} --prefix=/ -C {package_root}""".format(**params)
 
             SourceCollector.run(command,
-                                working_directory=self.redhat_folder)
-            print(os.listdir(self.redhat_folder))
+                                working_directory=self.package_folder)
+            print(os.listdir(self.package_folder))
             self.packaged = True
 
-    def upload(self):
+    def upload(self, *args, **kwargs):
         """
         Uploads a given set of packages
         """
+        _ = args, kwargs
+
         # Validation
         if self.packaged is False:
             raise RuntimeError('Product has not yet been packaged. Unable to upload it')
@@ -190,22 +187,22 @@ class RPMPackager(object):
             user = destination['user']
             base_path = destination['base_path']
 
-            packages = [p for p in os.listdir(self.redhat_folder) if p.endswith('.rpm')]
+            packages = [p for p in os.listdir(self.package_folder) if p.endswith('.rpm')]
             for package in packages:
-                package_source_path = os.path.join(self.redhat_folder, package)
+                package_source_path = os.path.join(self.package_folder, package)
 
                 command = 'scp {0} {1}@{2}:{3}/pool/{4}'.format(package_source_path, user, server, base_path, release_repo)
                 print('Uploading package {0}'.format(package))
                 SourceCollector.run(command=command,
-                                    working_directory=self.redhat_folder,
+                                    working_directory=self.package_folder,
                                     print_only=self.dry_run)
             if len(packages) > 0:
                 # Cleanup existing files
                 command = 'ssh {0}@{1} {2}/cleanup_repo.py {2}/pool/{3}/'.format(user, server, base_path, release_repo)
                 print(SourceCollector.run(command=command,
-                                          working_directory=self.redhat_folder,
+                                          working_directory=self.package_folder,
                                           print_only=self.dry_run))
                 command = 'ssh {0}@{1} createrepo --update {2}/dists/{3}'.format(user, server, base_path, release_repo)
                 SourceCollector.run(command=command,
-                                    working_directory=self.redhat_folder,
+                                    working_directory=self.package_folder,
                                     print_only=self.dry_run)

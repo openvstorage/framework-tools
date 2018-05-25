@@ -40,7 +40,7 @@ class SourceCollector(object):
     path_package = '{0}/package'
     path_metadata = '{0}/metadata'
 
-    def __init__(self, product, release=None, revision=None, artifact_only=False, dry_run=False):
+    def __init__(self, product, release=None, revision=None, artifact_only=False, dry_run=False, is_pip=False):
         """
         Initializes a source collector
         :param product: The product that needs to be packaged
@@ -56,6 +56,7 @@ class SourceCollector(object):
         * No tagging will occur
         :param dry_run: Run the source collector in dry run mode
         * This will not do any impacting changes (like uploading/tagging)
+        :param is_pip: Indicate that the passed product is a pip module
         """
         print 'Validating input parameters'
         settings = self.get_settings()
@@ -73,9 +74,10 @@ class SourceCollector(object):
         self.revision = revision
         self.artifact_only = artifact_only
         self.dry_run = dry_run
+        self.is_pip = is_pip
 
         self.settings = settings
-        self.repository = self.settings['repositories']['code'][product]
+        self.repository = self.settings['repositories']['code'][product] if not self.is_pip else None
         # Set some pathing information
         self.working_directory = self.settings['base_path'].format(self.product)
         self.path_code = self.path_code.format(self.working_directory)
@@ -114,7 +116,7 @@ class SourceCollector(object):
     def collect(self):
         """
         Executes the source collecting logic
-        General steps:
+        General steps for FWK-repos:
         1. Figure out correct code revision, update code repo to that revision
         2. Tag that revision, if required
         3. Generate changelog, if required
@@ -123,6 +125,14 @@ class SourceCollector(object):
         6. Use this 'upstream source package' for building distribution specific packages
         """
         print 'Working directory: {0}'.format(self.working_directory)
+
+        # Get the repository to push too
+        self._get_release_repo()
+
+        if self.is_pip:
+            # Collected statistics do not matter for PIP. The converter will generate it based on the pip package
+            self.package_tags = ["enterprise"]  # Only supporting enterprise
+            return self.product, self.release_repo, self.version_string, self.revision_date, self.package_name, self.package_tags
 
         # Collect all information about the source
         self._collect_sources()
@@ -136,8 +146,6 @@ class SourceCollector(object):
         self._tag_revision()
         # Building archive
         self._build_archive()
-        # Get the repository to push too
-        self._get_release_repo()
         return self.product, self.release_repo, self.version_string, self.revision_date, self.package_name, self.package_tags
 
     def _create_destination_directories(self):

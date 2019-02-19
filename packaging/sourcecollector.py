@@ -40,7 +40,7 @@ class SourceCollector(object):
     path_package = '{0}/package'
     path_metadata = '{0}/metadata'
 
-    def __init__(self, product, release=None, revision=None, artifact_only=False, dry_run=False, is_pip=False):
+    def __init__(self, product, release=None, revision=None, artifact_only=False, dry_run=False, is_pip=False, py2deb_path='py2deb'):
         """
         Initializes a source collector
         :param product: The product that needs to be packaged
@@ -57,6 +57,7 @@ class SourceCollector(object):
         :param dry_run: Run the source collector in dry run mode
         * This will not do any impacting changes (like uploading/tagging)
         :param is_pip: Indicate that the passed product is a pip module
+        :param py2deb_path: Path to the py2deb binary
         """
         print 'Validating input parameters'
         settings = self.get_settings()
@@ -75,6 +76,7 @@ class SourceCollector(object):
         self.artifact_only = artifact_only
         self.dry_run = dry_run
         self.is_pip = is_pip
+        self.py2deb_path = py2deb_path
 
         self.settings = settings
         self.repository = self.settings['repositories']['code'][product] if not self.is_pip else None

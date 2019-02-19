@@ -54,5 +54,5 @@ class PIPDebianPackager(DebianPackager):
         path_package = self.source_collector.path_package
 
         # Convert using the tool. This will generate a package called python-PRODUCT_VERSION.deb
-        SourceCollector.run('{0} {1}'.format(self.source_collector.py2deb_path, product), working_directory=path_package)
+        SourceCollector.run('{0} -r {1} {2}'.format(self.source_collector.py2deb_path, path_package, product), working_directory=path_package)
         self.packaged = True

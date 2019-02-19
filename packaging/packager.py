@@ -48,7 +48,8 @@ if __name__ == '__main__':
                                        revision=options.revision,
                                        artifact_only=options.artifact_only,
                                        dry_run=options.dry_run,
-                                       is_pip=options.is_pip)
+                                       is_pip=options.is_pip,
+                                       py2deb_path=options.py2deb_path)
     # Setting it to artifact only also means no uploading
     if options.artifact_only is True:
         options.no_upload = True

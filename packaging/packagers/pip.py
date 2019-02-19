@@ -17,6 +17,9 @@
 """
 Pip packager module
 """
+import os
+import errno
+import shutil
 from packaging.packagers.debian import DebianPackager
 from packaging.sourcecollector import SourceCollector
 
@@ -51,8 +54,16 @@ class PIPDebianPackager(DebianPackager):
         if any(item is None for item in [product, release_repo]):
             raise RuntimeError('The given source collector has not yet collected all of the required information')
 
-        path_package = self.source_collector.path_package
+        if os.path.exists(self.package_folder):
+            shutil.rmtree(self.package_folder)
+
+        try:
+            # Safer to capture the exception than to check if the directory exists (which can have race condition problems).
+            os.makedirs(self.package_folder)
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
 
         # Convert using the tool. This will generate a package called python-PRODUCT_VERSION.deb
-        SourceCollector.run('{0} -r {1} {2}'.format(self.source_collector.py2deb_path, path_package, product), working_directory=path_package)
+        SourceCollector.run('{0} -r {1} {2}'.format(self.source_collector.py2deb_path, self.package_folder, product), working_directory=self.package_folder)
         self.packaged = True

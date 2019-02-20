@@ -5,7 +5,7 @@ find ${WORKSPACE} -name .coverage -exec rm {} \;
 
 PYTHONPATH=:${WORKSPACE}
 cd ${WORKSPACE}
-ARGS="--product=""${product}"" --release=""${release}"
+ARGS="--product=""${product}"" --release=""${release}"" --py2deb-path=""${py2deb_path}"
 if [ "${artifact_only}" == "true" ]
 then
   ARGS="${ARGS} --artifact-only"

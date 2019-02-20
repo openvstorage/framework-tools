@@ -37,6 +37,8 @@ if __name__ == '__main__':
     parser.add_option('--no-rpm', dest='rpm', action='store_false', default=True)
     parser.add_option('--no-deb', dest='deb', action='store_false', default=True)
     parser.add_option('--pip', dest='is_pip', action='store_true', default=False)
+    # Currently used as a workarond. The jenkins user does not have py2deb as a command wheras root does
+    parser.add_option('--py2deb-path', dest='py2deb_path', default='py2deb')
     options, args = parser.parse_args()
 
     print 'Received arguments: {0}'.format(options)
@@ -46,7 +48,8 @@ if __name__ == '__main__':
                                        revision=options.revision,
                                        artifact_only=options.artifact_only,
                                        dry_run=options.dry_run,
-                                       is_pip=options.is_pip)
+                                       is_pip=options.is_pip,
+                                       py2deb_path=options.py2deb_path)
     # Setting it to artifact only also means no uploading
     if options.artifact_only is True:
         options.no_upload = True

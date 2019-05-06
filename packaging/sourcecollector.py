@@ -390,10 +390,10 @@ class SourceCollector(object):
         Updates a given repo to a certain revision, cloning if it does not exist yet
         """
         if not os.path.exists('{0}/.git'.format(path)):
-            SourceCollector.run('git clone {0} {1}'.format(repo, path), path)
-        SourceCollector.run('git pull --all --prune || true', path)
+            SourceCollector.run('git clone --recurse-submodules {0} {1}'.format(repo, path), path)
+        SourceCollector.run('git pull --recurse-submodules --all --prune || true', path)
         SourceCollector.run('git checkout {0}'.format(revision), path)
-        SourceCollector.run('git pull --prune', path)
+        SourceCollector.run('git pull --recurse-submodules --prune', path)
         SourceCollector.run('git fetch --tags', path)
 
     @staticmethod

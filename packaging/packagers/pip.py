@@ -65,5 +65,6 @@ class PIPDebianPackager(DebianPackager):
                 raise
 
         # Convert using the tool. This will generate a package called python-PRODUCT_VERSION.deb
+        # @todo the product has to be substituted with the local directory
         SourceCollector.run('{0} -r {1} {2}'.format(self.source_collector.py2deb_path, self.package_folder, product), working_directory=self.package_folder)
         self.packaged = True

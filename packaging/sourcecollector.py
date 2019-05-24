@@ -40,7 +40,7 @@ class SourceCollector(object):
     path_package = '{0}/package'
     path_metadata = '{0}/metadata'
 
-    def __init__(self, product, release=None, revision=None, artifact_only=False, dry_run=False, is_pip=False, py2deb_path='py2deb'):
+    def __init__(self, product, release=None, revision=None, artifact_only=False, dry_run=False, py2deb_path='py2deb'):
         """
         Initializes a source collector
         :param product: The product that needs to be packaged
@@ -56,8 +56,8 @@ class SourceCollector(object):
         * No tagging will occur
         :param dry_run: Run the source collector in dry run mode
         * This will not do any impacting changes (like uploading/tagging)
-        :param is_pip: Indicate that the passed product is a pip module
         :param py2deb_path: Path to the py2deb binary
+        that needs to be packaged instead of a pip packaged that needs to be fetched
         """
         print 'Validating input parameters'
         settings = self.get_settings()
@@ -75,11 +75,11 @@ class SourceCollector(object):
         self.revision = revision
         self.artifact_only = artifact_only
         self.dry_run = dry_run
-        self.is_pip = is_pip
         self.py2deb_path = py2deb_path
+        self.is_pip, self.pip_is_repo = self.is_pip_package(product, settings)
 
         self.settings = settings
-        self.repository = self.settings['repositories']['code'][product] if not self.is_pip else None
+        self.repository = self.settings['repositories']['code'].get(product)
         # Set some pathing information
         self.working_directory = self.settings['base_path'].format(self.product)
         self.path_code = self.path_code.format(self.working_directory)
@@ -107,6 +107,21 @@ class SourceCollector(object):
         self._create_destination_directories()
 
     @staticmethod
+    def is_pip_package(product, settings):
+        # type: (str, dict) -> tuple
+        """
+        Determine that the passed product is a pip package
+        :param product: Product to build
+        :type product: str
+        :param settings: Settings content
+        :type settings: dict
+        :return: True if is else False
+        """
+        pip_modules = settings.get('pip', {}).get('modules', [])
+        pip_repos = settings.get('repositories', {}).get('python_setup', [])
+        return product in pip_modules, product in pip_repos
+
+    @staticmethod
     def get_settings():
         """
         Retrieves the current settings
@@ -131,8 +146,8 @@ class SourceCollector(object):
         # Get the repository to push too
         self._get_release_repo()
 
-        if self.is_pip:
-            # Collected statistics do not matter for PIP. The converter will generate it based on the pip package
+        if self.is_pip and not self.pip_is_repo:
+            # Collected statistics do not matter for PIP packages. The converter will generate it based on the pip package
             self.package_tags = ["enterprise"]  # Only supporting enterprise
             return self.product, self.release_repo, self.version_string, self.revision_date, self.package_name, self.package_tags
 
@@ -187,6 +202,9 @@ class SourceCollector(object):
         :return: None
         :rtype: NoneType
         """
+        if self.is_pip:
+            print 'Skipping archive as setuptools do this for us'
+            return
         # Validation
         if self.code_settings is None:
             raise RuntimeError('Sources have not yet been collected')

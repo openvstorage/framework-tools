@@ -8,6 +8,7 @@
     ],
     "repositories": {
         "code": {
+            "pyrakoon": "git@github.com:openvstorage/pyrakoon.git",
             "dev_ops": "git@github.com:openvstorage/dev_ops.git",
             "hprm-manager": "git@github.com:openvstorage/hprm-manager.git",
             "iscsi-manager": "git@github.com:openvstorage/iscsi-manager.git",
@@ -23,6 +24,7 @@
             "openvstorage-s3-manager": "git@github.com:openvstorage/alba-s3manager.git",
             "openvstorage-support-tools": "git@github.com:openvstorage/support-tools.git"
         },
+        "python_setup": ["pyrakoon"],
         "exclude_builds": {
             "iscsi-manager": ["rpm"],
             "openvstorage-iscsi-plugin": ["rpm"]

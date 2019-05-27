@@ -22,8 +22,13 @@ import os
 import re
 import time
 import json
+import logging
 from datetime import datetime
 from subprocess import check_output, CalledProcessError
+
+
+logging.basicConfig(level=logging.DEBUG)
+_logger = logging.getLogger(__name__)
 
 
 class SourceCollector(object):
@@ -247,19 +252,23 @@ class SourceCollector(object):
         # Load tag information
         self.tag_data = []
         print 'Loading tags'
-        for raw_tag in SourceCollector.run(command='git show-ref --tags',
-                                           working_directory=self.path_metadata).splitlines():
-            parts = raw_tag.strip().split(' ')
-            rev_hash = parts[0]
-            tag = parts[1].replace('refs/tags/', '')
-            match = re.search('^(?P<version>[0-9]+?\.[0-9]+?)\.(?P<build>[0-9]+?)([-.](.+))?$', tag)
-            if match:
-                match_dict = match.groupdict()
-                tag_version = match_dict['version']
-                tag_build = match_dict['build']
-                self.tag_data.append({'version': tag_version,  # 2.7  \__ 2.7.8
-                                      'build': int(tag_build),  # 8   /
-                                      'rev_hash': rev_hash})
+        try:
+            for raw_tag in SourceCollector.run(command='git show-ref --tags',
+                                               working_directory=self.path_metadata).splitlines():
+                parts = raw_tag.strip().split(' ')
+                rev_hash = parts[0]
+                tag = parts[1].replace('refs/tags/', '')
+                match = re.search('^(?P<version>[0-9]+?\.[0-9]+?)\.(?P<build>[0-9]+?)([-.](.+))?$', tag)
+                if match:
+                    match_dict = match.groupdict()
+                    tag_version = match_dict['version']
+                    tag_build = match_dict['build']
+                    self.tag_data.append({'version': tag_version,  # 2.7  \__ 2.7.8
+                                          'build': int(tag_build),  # 8   /
+                                          'rev_hash': rev_hash})
+        except Exception:
+            _logger.exception("Failed to fetch the tags. Can't assume that there are none as it can have consequences. Aborting")
+            raise
         return self.revision_hash, self.revision_date, self.version, self.tag_data
 
     def _tag_revision(self):

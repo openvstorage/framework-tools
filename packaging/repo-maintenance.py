@@ -19,17 +19,30 @@ Repo maintenance module
 """
 
 import os
+import re
+import logging
 from distutils.version import LooseVersion
 from optparse import OptionParser
 from sourcecollector import SourceCollector
+
+
+logging.basicConfig(level=logging.DEBUG)
+_logger = logging.getLogger(__name__)
+
+PACKAGE_REGEX = re.compile('(?P<name>\D*)(?P<separator>[-|_])(?P<version>(?P<version_simple>(\d+\.)?(\d+\.)?(\d+))(\-\d)?)(_.*)')
+
 
 if __name__ == '__main__':
     parser = OptionParser(description='Open vStorage repo maintenance')
     parser.add_option('-f', '--from-release', dest='from_release')
     parser.add_option('-t', '--to-release', dest='to_release')
     parser.add_option('-s', '--skip', dest='skip')
+    parser.add_option('-d', '--dry-run', dest='dry_run', action='store_true', default=False)
+
     options, args = parser.parse_args()
 
+    dry_run = options.dry_run
+    skips = tuple(options.skip.split(',')) if options.skip is not None else ()
     settings = SourceCollector.json_loads('{0}/{1}'.format(os.path.dirname(os.path.realpath(__file__)), 'settings.json'))
 
     package_info = settings['repositories']['packages'].get('debian', [])
@@ -70,6 +83,7 @@ if __name__ == '__main__':
                     package_map[name] = version
 
         package_map = {}
+        package_meta_package_map = {}
         for release in [options.from_release, options.to_release, 'upstream']:
             print '    package folder for {0}'.format(release)
 
@@ -77,14 +91,22 @@ if __name__ == '__main__':
             packages = SourceCollector.run(command=ls_command,
                                            working_directory='/').strip().splitlines()
             for package in packages:
-                deb = package.replace('{0}/{1}/'.format(base_path, release), '')
+                deb = os.path.basename(package)
                 if '_' not in deb and release == 'upstream':
                     continue  # Unparsable upstream packages
-                name, version, _ = deb.split('_', 2)
-                if options.skip is not None:
-                    skips = tuple(options.skip.split(','))
-                    if name.startswith(skips):
-                        continue
+
+                search = PACKAGE_REGEX.search(deb)
+                if not search:
+                    _logger.info('Malformatted .deb for "{0}"'.format(deb))
+                    continue
+                groups_dict = search.groupdict()
+                name, separator, version = groups_dict['name'], groups_dict['separator'], groups_dict['version']
+                if separator == '-':
+                    _logger.info('Assuming that {0} is a versioned package'.format(deb))
+                    # Versioned .deb format: alba-ee-1.5.33-1_amd64.deb
+                if name.startswith(skips):
+                    _logger.info('Skipping {0} as requested by the user'.format(deb))
+                    continue
 
                 if name in package_map:
                     if LooseVersion(version) > LooseVersion(package_map[name][0]):
@@ -113,4 +135,5 @@ if __name__ == '__main__':
                     user, server, base_path, options.to_release, deb_location
                 )
                 SourceCollector.run(command=repo_command,
-                                    working_directory='/')
+                                    working_directory='/',
+                                    print_only=dry_run)
